@@ -267,6 +267,18 @@
     .loading-text { font-size: 0.85rem; color: #ccc; }
 
     #file-input, #ann-img-input { display: none; }
+
+    /* ===== SAVE STATUS ===== */
+    #save-status {
+      font-size: 0.72rem; color: #999; white-space: nowrap;
+      transition: color 0.3s;
+    }
+    #btn-clear-storage {
+      font-size: 0.72rem; color: #bbb; background: none; border: none;
+      cursor: pointer; padding: 2px 6px; border-radius: 4px;
+      transition: background 0.15s, color 0.15s;
+    }
+    #btn-clear-storage:hover { background: #f5e8e8; color: #c03030; }
   </style>
 </head>
 <body>
@@ -324,6 +336,9 @@
   </button>
 
   <div class="topbar-spacer"></div>
+
+  <span id="save-status"></span>
+  <button id="btn-clear-storage" onclick="clearStorage()" title="保存データを消去して最初からやり直す">消去</button>
 
   <button class="btn-ghost" onclick="exportPDF()">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -449,6 +464,7 @@ function addPage() {
   const num = pages.length + 1;
   pages.push(newPage('ページ ' + num));
   activatePage(pages.length - 1);
+  saveToStorage();
 }
 
 function removePage(idx) {
@@ -457,6 +473,7 @@ function removePage(idx) {
   pages.splice(idx, 1);
   if (curIdx >= pages.length) curIdx = pages.length - 1;
   activatePage(curIdx);
+  saveToStorage();
 }
 
 function rebuildPageStrip() {
@@ -528,12 +545,18 @@ function loadImageFile(file) {
     tc.width = 48; tc.height = Math.round(48 * p.canvasH / p.canvasW);
     tc.getContext('2d').drawImage(img, 0, 0, tc.width, tc.height);
     p.thumbnail = tc.toDataURL('image/jpeg', 0.7);
+    // Store image at display resolution for localStorage (JPEG 0.85)
+    const fc = document.createElement('canvas');
+    fc.width = p.canvasW; fc.height = p.canvasH;
+    fc.getContext('2d').drawImage(img, 0, 0, p.canvasW, p.canvasH);
+    p.imgDataURL = fc.toDataURL('image/jpeg', 0.85);
     dropZone.style.display = 'none';
     container.style.display = 'block';
     panel.scrollTop = 0;
     document.getElementById('btn-replace').style.display = 'flex';
     render();
     rebuildPageStrip();
+    saveToStorage();
     URL.revokeObjectURL(url);
   };
   img.src = url;
@@ -644,6 +667,7 @@ function addAnnotation(data) {
   const ann = { ...data, num: p.nextNum++, id: Date.now(), text: '', images: [] };
   p.annotations.push(ann);
   render(); rebuildSidebar(); rebuildPageStrip();
+  saveToStorage();
   setTimeout(() => {
     const items = document.querySelectorAll('.ann-text');
     if (items.length) items[items.length - 1].focus();
@@ -655,6 +679,7 @@ function removeAnnotation(id) {
   p.annotations.forEach((a, i) => a.num = i + 1);
   p.nextNum = p.annotations.length + 1;
   render(); rebuildSidebar(); rebuildPageStrip();
+  saveToStorage();
 }
 function undoLast() {
   const p = pg();
@@ -663,6 +688,7 @@ function undoLast() {
   p.redoStack.push(removed);
   p.nextNum = p.annotations.length + 1;
   render(); rebuildSidebar(); rebuildPageStrip();
+  saveToStorage();
 }
 function redoLast() {
   const p = pg();
@@ -671,12 +697,14 @@ function redoLast() {
   ann.num = p.nextNum++;
   p.annotations.push(ann);
   render(); rebuildSidebar(); rebuildPageStrip();
+  saveToStorage();
 }
 function clearPage() {
   const p = pg();
   if (p.annotations.length && !confirm('このページの全指示を削除しますか？')) return;
   p.annotations = []; p.nextNum = 1;
   render(); rebuildSidebar(); rebuildPageStrip();
+  saveToStorage();
 }
 function renamePage(idx, e) {
   e.stopPropagation();
@@ -700,6 +728,7 @@ function renamePage(idx, e) {
     const val = input.value.trim() || current;
     pages[idx].label = val;
     rebuildPageStrip();
+    saveToStorage();
   }
   input.addEventListener('blur', commit);
   input.addEventListener('keydown', ev => {
@@ -738,6 +767,7 @@ function onTabDrop(e, idx) {
   }
   _dragPageIdx = null;
   activatePage(curIdx);
+  saveToStorage();
 }
 function onTabDragEnd(e) {
   _dragPageIdx = null;
@@ -796,6 +826,7 @@ function rebuildSidebar() {
 function syncText(id, value) {
   const ann = pg().annotations.find(a => a.id === id);
   if (ann) ann.text = value;
+  debouncedSave();
 }
 
 // ===== IMAGE ATTACHMENT =====
@@ -818,6 +849,7 @@ document.getElementById('ann-img-input').addEventListener('change', e => {
       if (!ann.images) ann.images = [];
       ann.images.push(ev.target.result);
       rebuildSidebar();
+      saveToStorage();
     }
     _pendingAttachAnnId = null;
   };
@@ -826,7 +858,7 @@ document.getElementById('ann-img-input').addEventListener('change', e => {
 
 function removeAnnImage(annId, imgIdx) {
   const ann = pg().annotations.find(a => a.id === annId);
-  if (ann && ann.images) { ann.images.splice(imgIdx, 1); rebuildSidebar(); }
+  if (ann && ann.images) { ann.images.splice(imgIdx, 1); rebuildSidebar(); saveToStorage(); }
 }
 
 // ===== ANNOTATION ITEM: DRAG & DROP IMAGE ATTACH =====
@@ -870,6 +902,7 @@ function removeAnnImage(annId, imgIdx) {
         if (!ann.images) ann.images = [];
         ann.images.push(ev.target.result);
         rebuildSidebar();
+        saveToStorage();
       }
     };
     reader.readAsDataURL(file);
@@ -1425,6 +1458,122 @@ async function exportPDF() {
   pdf.save(`${safeName}.pdf`);
 }
 
+// ===== LOCAL STORAGE AUTO-SAVE =====
+const STORAGE_KEY = 'revision-request-v1';
+let _saveTimer = null;
+
+function saveToStorage() {
+  try {
+    const data = {
+      version: 1,
+      savedAt: Date.now(),
+      curIdx,
+      meta: {
+        project:  document.getElementById('meta-project').value,
+        deadline: document.getElementById('meta-deadline').value,
+        pdfname:  document.getElementById('meta-pdfname').value,
+      },
+      pages: pages.map(p => ({
+        id:          p.id,
+        label:       p.label,
+        imgDataURL:  p.imgDataURL || null,
+        thumbnail:   p.thumbnail,
+        canvasW:     p.canvasW,
+        canvasH:     p.canvasH,
+        nextNum:     p.nextNum,
+        annotations: p.annotations.map(a => ({
+          id: a.id, num: a.num, type: a.type,
+          x: a.x, y: a.y, w: a.w, h: a.h,
+          text: a.text, images: a.images || []
+        }))
+      }))
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    showSaveStatus('saved');
+  } catch (e) {
+    if (e.name === 'QuotaExceededError') showSaveStatus('error');
+  }
+}
+
+function debouncedSave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(saveToStorage, 800);
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data || !data.pages || !data.pages.length) return false;
+
+    // Restore meta fields
+    if (data.meta) {
+      document.getElementById('meta-project').value  = data.meta.project  || '';
+      document.getElementById('meta-deadline').value = data.meta.deadline || '';
+      document.getElementById('meta-pdfname').value  = data.meta.pdfname  || '';
+    }
+
+    // Restore pages array (imgEl is rebuilt below from imgDataURL)
+    pages = data.pages.map(pd => ({
+      id:          pd.id,
+      label:       pd.label,
+      imgEl:       null,
+      imgDataURL:  pd.imgDataURL || null,
+      thumbnail:   pd.thumbnail,
+      canvasW:     pd.canvasW,
+      canvasH:     pd.canvasH,
+      nextNum:     pd.nextNum,
+      annotations: pd.annotations || [],
+      redoStack:   []
+    }));
+    curIdx = Math.min(data.curIdx || 0, pages.length - 1);
+
+    // Rebuild imgEl for each page that has a stored image
+    let pending = pages.filter(p => p.imgDataURL).length;
+    if (pending === 0) { activatePage(curIdx); return true; }
+
+    pages.forEach(p => {
+      if (!p.imgDataURL) return;
+      const img = new Image();
+      img.onload = () => {
+        p.imgEl = img;
+        pending--;
+        if (pending === 0) {
+          activatePage(curIdx);
+          showSaveStatus('restored');
+        }
+      };
+      img.src = p.imgDataURL;
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function clearStorage() {
+  if (!confirm('保存されたデータをすべて消去して最初からやり直しますか？\nこの操作は取り消せません。')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function showSaveStatus(state) {
+  const el = document.getElementById('save-status');
+  if (!el) return;
+  if (state === 'saved') {
+    el.textContent = '✓ 自動保存済み';
+    el.style.color = '#aaa';
+  } else if (state === 'restored') {
+    el.textContent = '↩ データを復元しました';
+    el.style.color = '#4a90d9';
+    setTimeout(() => { el.textContent = '✓ 自動保存済み'; el.style.color = '#aaa'; }, 4000);
+  } else if (state === 'error') {
+    el.textContent = '⚠ 保存失敗（容量不足）';
+    el.style.color = '#d04040';
+  }
+}
+
 // ===== KEYBOARD =====
 document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') { e.preventDefault(); redoLast(); return; }
@@ -1436,8 +1585,16 @@ document.addEventListener('keydown', e => {
 });
 
 // ===== INIT =====
-rebuildPageStrip();
-rebuildSidebar();
+// Meta フィールドの変更を自動保存
+['meta-project', 'meta-deadline', 'meta-pdfname'].forEach(id => {
+  document.getElementById(id).addEventListener('input', debouncedSave);
+});
+
+// localStorageからデータを復元（なければデフォルト表示）
+if (!loadFromStorage()) {
+  rebuildPageStrip();
+  rebuildSidebar();
+}
 </script>
 </body>
 </html>
