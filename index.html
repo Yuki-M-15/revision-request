@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>修正指示書ツール</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      background: #1c1c1c;
+      color: #1a1a1a;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ===== TOPBAR ===== */
+    .topbar {
+      background: #242424;
+      color: #fff;
+      padding: 0 16px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      border-bottom: 1px solid #333;
+    }
+    .topbar-logo {
+      font-size: 0.8rem; font-weight: 700; color: #fff; letter-spacing: 0.06em;
+      padding-right: 12px; border-right: 1px solid #3a3a3a; white-space: nowrap;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .topbar-logo .logo-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #e8613a; flex-shrink: 0;
+    }
+    .tool-group {
+      display: flex; gap: 2px; background: #333; border-radius: 6px; padding: 3px;
+    }
+    .tool-btn {
+      background: none; border: none; color: #888; padding: 5px 10px; border-radius: 4px;
+      cursor: pointer; font-size: 0.74rem; font-family: inherit;
+      display: flex; align-items: center; gap: 5px; transition: all 0.12s; white-space: nowrap;
+    }
+    .tool-btn:hover { background: #444; color: #ccc; }
+    .tool-btn.active { background: #fff; color: #1a1a1a; font-weight: 700; }
+    .sep { width: 1px; height: 20px; background: #3a3a3a; margin: 0 2px; }
+    .topbar-spacer { flex: 1; }
+    .btn-ghost {
+      background: none; border: 1px solid #3a3a3a; color: #888; border-radius: 6px;
+      padding: 5px 11px; font-size: 0.74rem; font-family: inherit; cursor: pointer;
+      display: flex; align-items: center; gap: 5px; transition: all 0.12s; white-space: nowrap;
+    }
+    .btn-ghost:hover { border-color: #666; color: #ccc; }
+    .btn-pdf {
+      background: #e8613a; color: #fff; border: none; border-radius: 6px;
+      padding: 7px 15px; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+      font-family: inherit; display: flex; align-items: center; gap: 6px;
+      transition: background 0.12s; white-space: nowrap;
+    }
+    .btn-pdf:hover { background: #d45530; }
+
+    /* ===== META BAR ===== */
+    .metabar {
+      background: #2c2c2c; padding: 0 16px; height: 36px;
+      display: flex; align-items: center; gap: 18px;
+      flex-shrink: 0; border-bottom: 1px solid #333; overflow-x: auto;
+    }
+    .meta-field { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .meta-label { font-size: 0.63rem; font-weight: 700; color: #666; letter-spacing: 0.08em; text-transform: uppercase; }
+    .meta-input {
+      background: transparent; border: none; border-bottom: 1px solid #444;
+      color: #ccc; font-size: 0.76rem; font-family: inherit; padding: 2px 5px;
+      width: 148px; transition: border-color 0.12s;
+    }
+    .meta-input:focus { outline: none; border-bottom-color: #888; color: #fff; }
+    .meta-input::placeholder { color: #555; }
+    .meta-input.short { width: 98px; }
+    .meta-input.date { width: 118px; color-scheme: dark; }
+
+    /* ===== MAIN ===== */
+    .main { flex: 1; display: flex; overflow: hidden; }
+
+    /* ===== CANVAS WRAPPER (left column) ===== */
+    .canvas-wrapper {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+    }
+
+    /* ===== PAGE STRIP ===== */
+    .page-strip {
+      background: #1e1e1e; border-bottom: 1px solid #2e2e2e;
+      padding: 7px 14px; display: flex; align-items: center; gap: 6px;
+      flex-shrink: 0; overflow-x: auto;
+    }
+    .page-strip::-webkit-scrollbar { height: 4px; }
+    .page-strip::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+    .page-tab {
+      display: flex; align-items: center; gap: 7px;
+      background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 7px;
+      padding: 5px 10px 5px 7px; cursor: pointer;
+      transition: all 0.14s; flex-shrink: 0; min-width: 0;
+    }
+    .page-tab:hover { border-color: #555; background: #333; }
+    .page-tab.active { background: #fff; border-color: #fff; }
+    .tab-thumb {
+      width: 36px; height: 24px; object-fit: cover;
+      border-radius: 3px; flex-shrink: 0;
+      background: #444;
+    }
+    .tab-thumb.empty {
+      background: #333; border: 1px dashed #4a4a4a;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; color: #555;
+    }
+    .tab-label {
+      font-size: 0.72rem; font-weight: 600; color: #999; white-space: nowrap;
+    }
+    .page-tab.active .tab-label { color: #1a1a1a; }
+    .tab-ann-count {
+      font-size: 0.6rem; font-weight: 700; color: #fff;
+      background: #e03030; border-radius: 8px; padding: 1px 5px; line-height: 1.4;
+    }
+    .page-tab.active .tab-ann-count { background: #e03030; color: #fff; }
+    .tab-close {
+      background: none; border: none; color: #888; font-size: 0.7rem;
+      cursor: pointer; padding: 0 2px; line-height: 1; border-radius: 2px;
+      transition: color 0.12s; margin-left: 1px; flex-shrink: 0;
+    }
+    .page-tab.active .tab-close { color: #999; }
+    .tab-close:hover { color: #e03030 !important; }
+    .btn-add-page {
+      background: none; border: 1px dashed #3a3a3a; border-radius: 7px;
+      color: #555; padding: 5px 12px; font-size: 0.72rem; font-family: inherit;
+      cursor: pointer; transition: all 0.12s; white-space: nowrap; flex-shrink: 0;
+    }
+    .btn-add-page:hover { border-color: #666; color: #888; }
+    .page-tab.dragging { opacity: 0.4; }
+    .page-tab.drag-over { border-color: #888 !important; border-style: dashed !important; background: #333 !important; }
+    .tab-label { cursor: text; }
+
+    /* ===== CANVAS PANEL ===== */
+    .canvas-panel {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; overflow: auto; padding: 24px;
+      background: #141414; position: relative;
+    }
+    .drop-zone {
+      border: 2px dashed #3a3a3a; border-radius: 14px; padding: 56px 48px;
+      text-align: center; color: #555; cursor: pointer; max-width: 460px;
+      width: 100%; transition: all 0.18s; user-select: none; margin: auto;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #666; color: #888; background: rgba(255,255,255,0.02); }
+    .drop-zone-icon { font-size: 2.8rem; margin-bottom: 14px; line-height: 1; }
+    .drop-zone-title { font-size: 0.88rem; font-weight: 600; color: #777; margin-bottom: 8px; }
+    .drop-zone-sub { font-size: 0.71rem; color: #444; line-height: 1.8; }
+    .drop-zone-hint { margin-top: 18px; font-size: 0.67rem; color: #3a3a3a; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .kbd { background: #2e2e2e; border: 1px solid #444; border-radius: 3px; padding: 1px 6px; font-size: 0.67rem; color: #666; }
+
+    #canvas-container {
+      display: none; position: relative;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6); flex-shrink: 0;
+    }
+    #canvas-container.tool-pin, #canvas-container.tool-box { cursor: crosshair; }
+    #main-canvas { display: block; }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      width: 280px; flex-shrink: 0; background: #f5f5f1;
+      border-left: 1px solid #ddddd8; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 11px 15px; border-bottom: 1px solid #e4e4e0;
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .sidebar-title { font-size: 0.67rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #999; }
+    .ann-count-badge {
+      background: #e03030; color: #fff; border-radius: 10px;
+      padding: 1px 7px; font-size: 0.64rem; font-weight: 700;
+    }
+    .ann-count-badge.zero { background: #ddd; color: #aaa; }
+    .annotation-list { flex: 1; overflow-y: auto; padding: 9px; }
+    .empty-state { padding: 36px 14px; text-align: center; color: #bbb; font-size: 0.76rem; line-height: 1.9; }
+    .empty-state-icon { font-size: 1.6rem; margin-bottom: 10px; opacity: 0.35; }
+    .annotation-item {
+      background: #fff; border-radius: 8px; padding: 10px 12px; margin-bottom: 7px;
+      border: 1.5px solid #e8e8e4; transition: border-color 0.12s, background 0.12s;
+    }
+    .annotation-item:hover { border-color: #ccc; }
+    .annotation-item.drag-over {
+      border-color: #1a1a1a; border-style: dashed;
+      background: #f5f8ff;
+    }
+    .annotation-item.drag-over .btn-attach {
+      border-color: #1a1a1a; color: #1a1a1a; background: #eef2ff;
+    }
+    .ann-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ann-num {
+      width: 20px; height: 20px; background: #e03030; color: #fff; border-radius: 50%;
+      font-size: 0.66rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .ann-type-label { font-size: 0.67rem; color: #bbb; flex: 1; }
+    .ann-delete {
+      background: none; border: none; color: #ddd; font-size: 0.8rem;
+      cursor: pointer; padding: 2px 4px; border-radius: 3px; line-height: 1; transition: color 0.12s;
+    }
+    .ann-delete:hover { color: #e03030; }
+    .ann-text {
+      width: 100%; border: 1.5px solid #ebebeb; border-radius: 5px; padding: 7px 9px;
+      font-size: 0.77rem; font-family: inherit; resize: none; min-height: 62px;
+      background: #fafaf8; color: #1a1a1a; line-height: 1.6; transition: border-color 0.12s, background 0.12s;
+    }
+    .ann-text:focus { outline: none; border-color: #1a1a1a; background: #fff; }
+    .ann-text::placeholder { color: #ccc; }
+
+    /* 添付画像 */
+    .ann-images { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+    .ann-img-wrap { position: relative; }
+    .ann-img-thumb {
+      width: 64px; height: 64px; object-fit: cover;
+      border-radius: 5px; border: 1px solid #e8e8e4; display: block; cursor: pointer;
+    }
+    .ann-img-thumb:hover { border-color: #bbb; }
+    .ann-img-remove {
+      position: absolute; top: -5px; right: -5px;
+      width: 17px; height: 17px; border-radius: 50%;
+      background: #e03030; color: #fff; border: none;
+      font-size: 0.55rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; line-height: 1;
+    }
+    .ann-img-remove:hover { background: #c02020; }
+    .btn-attach {
+      width: 100%; border: 1px dashed #e0e0dc; border-radius: 5px;
+      background: #fafaf8; color: #aaa; font-size: 0.72rem; font-family: inherit;
+      padding: 6px 10px; cursor: pointer; margin-top: 7px;
+      transition: all 0.12s; display: flex; align-items: center; gap: 5px; justify-content: center;
+    }
+    .btn-attach:hover { border-color: #bbb; color: #666; background: #f0f0ec; }
+    .btn-attach svg { fill: currentColor; display: block; flex-shrink: 0; }
+
+    /* 添付画像プレビューモーダル */
+    #img-preview-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    #img-preview-overlay.show { display: flex; }
+    #img-preview-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 6px; box-shadow: 0 8px 40px rgba(0,0,0,0.6); }
+    #img-preview-close {
+      position: fixed; top: 18px; right: 22px; color: #ccc; font-size: 1.8rem;
+      cursor: pointer; line-height: 1; background: none; border: none;
+    }
+    #img-preview-close:hover { color: #fff; }
+
+    /* ===== LOADING OVERLAY ===== */
+    #loading-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+      z-index: 999; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #fff;
+    }
+    #loading-overlay.show { display: flex; }
+    .loading-spinner {
+      width: 36px; height: 36px; border: 3px solid #555; border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 0.85rem; color: #ccc; }
+
+    #file-input, #ann-img-input { display: none; }
+  </style>
+</head>
+<body>
+
+<input type="file" id="file-input" accept="image/*">
+<input type="file" id="ann-img-input" accept="image/*">
+
+<!-- 添付画像プレビューモーダル -->
+<div id="img-preview-overlay">
+  <button id="img-preview-close" onclick="closeImgPreview()">✕</button>
+  <img id="img-preview-img" src="" alt="">
+</div>
+
+<!-- Loading overlay (PDF生成中) -->
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">PDF を生成中...</div>
+</div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <span class="topbar-logo"><span class="logo-dot"></span>修正依頼ツール</span>
+
+  <div class="tool-group">
+    <button class="tool-btn active" id="btn-pin" onclick="setTool('pin')">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>
+      ピン
+    </button>
+    <button class="tool-btn" id="btn-box" onclick="setTool('box')">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="1"/></svg>
+      エリア
+    </button>
+  </div>
+
+  <div class="sep"></div>
+
+  <button class="btn-ghost" onclick="undoLast()">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 10h11a5 5 0 0 1 0 10H9"/><polyline points="3 10 7 6 3 2 3 10"/></svg>
+    元に戻す
+  </button>
+  <button class="btn-ghost" onclick="redoLast()">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10H10a5 5 0 0 0 0 10h5"/><polyline points="21 10 17 6 21 2 21 10"/></svg>
+    やり直し
+  </button>
+  <button class="btn-ghost" onclick="clearPage()">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+    全消去
+  </button>
+
+  <div class="sep"></div>
+
+  <button class="btn-ghost" id="btn-replace" style="display:none" onclick="document.getElementById('file-input').click()">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+    差し替え
+  </button>
+
+  <div class="topbar-spacer"></div>
+
+  <button class="btn-ghost" onclick="exportPDF()">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    PDF出力
+  </button>
+
+  <button class="btn-pdf" onclick="exportHTML()">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+    HTML書き出し
+  </button>
+</div>
+
+<!-- Meta bar -->
+<div class="metabar">
+  <div class="meta-field">
+    <span class="meta-label">案件名</span>
+    <input class="meta-input" id="meta-project" type="text" placeholder="例：春夏LP">
+  </div>
+  <div class="meta-field">
+    <span class="meta-label">納期</span>
+    <input class="meta-input date" id="meta-deadline" type="date">
+  </div>
+  <div class="meta-field">
+    <span class="meta-label">書き出しファイル名</span>
+    <input class="meta-input" id="meta-pdfname" type="text" placeholder="例：230601_春夏LP修正依頼">
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Canvas wrapper (left) -->
+  <div class="canvas-wrapper">
+    <!-- Page strip -->
+    <div class="page-strip" id="page-strip"></div>
+
+    <!-- Scrollable canvas area -->
+    <div class="canvas-panel" id="canvas-panel">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div class="drop-zone-icon">🖼️</div>
+        <div class="drop-zone-title">画像をドロップまたはクリックして開く</div>
+        <div class="drop-zone-sub">スクリーンショット・カンプ・ラフに対応<br>PNG / JPG / GIF</div>
+      </div>
+
+      <div id="canvas-container" class="tool-pin">
+        <canvas id="main-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">変更リスト</span>
+      <span class="ann-count-badge zero" id="ann-badge">0</span>
+    </div>
+    <div class="annotation-list" id="annotation-list">
+      <div class="empty-state">
+        <div class="empty-state-icon">📍</div>
+        画像をアップロードして<br>修正箇所をクリックで追加
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== DATA MODEL =====
+// Each page: { id, label, imgEl, thumbnail, canvasW, canvasH, annotations:[], nextNum, redoStack:[] }
+
+function newPage(label) {
+  return { id: Date.now() + Math.random(), label: label || null, imgEl: null, thumbnail: null, canvasW: 0, canvasH: 0, annotations: [], nextNum: 1, redoStack: [] };
+}
+
+let pages = [newPage('ページ 1')];
+let curIdx = 0;  // current page index
+let currentTool = 'pin';
+let dragState = null;
+
+function pg() { return pages[curIdx]; }
+
+// ===== DOM =====
+const canvas    = document.getElementById('main-canvas');
+const ctx       = canvas.getContext('2d');
+const container = document.getElementById('canvas-container');
+const dropZone  = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const panel     = document.getElementById('canvas-panel');
+const dpr = window.devicePixelRatio || 1; // Retina対応：物理ピクセル倍率
+
+// ===== TOOL =====
+function setTool(t) {
+  currentTool = t;
+  document.getElementById('btn-pin').classList.toggle('active', t === 'pin');
+  document.getElementById('btn-box').classList.toggle('active', t === 'box');
+  container.className = 'tool-' + t;
+}
+
+// ===== PAGE MANAGEMENT =====
+function activatePage(idx) {
+  curIdx = idx;
+  const p = pg();
+  if (p.imgEl) {
+    canvas.width  = p.canvasW * dpr;
+    canvas.height = p.canvasH * dpr;
+    canvas.style.width  = p.canvasW + 'px';
+    canvas.style.height = p.canvasH + 'px';
+    dropZone.style.display = 'none';
+    container.style.display = 'block';
+  } else {
+    canvas.width = 1; canvas.height = 1;
+    dropZone.style.display = '';
+    container.style.display = 'none';
+  }
+  panel.scrollTop = 0;
+  // Show/hide replace btn
+  document.getElementById('btn-replace').style.display = p.imgEl ? 'flex' : 'none';
+  render();
+  rebuildSidebar();
+  rebuildPageStrip();
+}
+
+function addPage() {
+  const num = pages.length + 1;
+  pages.push(newPage('ページ ' + num));
+  activatePage(pages.length - 1);
+}
+
+function removePage(idx) {
+  if (pages.length <= 1) { alert('最低1ページは必要です。'); return; }
+  if (!confirm('ページ ' + (idx + 1) + ' を削除しますか？')) return;
+  pages.splice(idx, 1);
+  if (curIdx >= pages.length) curIdx = pages.length - 1;
+  activatePage(curIdx);
+}
+
+function rebuildPageStrip() {
+  const strip = document.getElementById('page-strip');
+  strip.innerHTML = pages.map((p, i) => {
+    const isActive = i === curIdx;
+    const thumbHtml = p.thumbnail
+      ? `<img class="tab-thumb" src="${p.thumbnail}" alt="">`
+      : `<div class="tab-thumb empty" style="display:flex;align-items:center;justify-content:center;font-size:0.55rem;color:#555;">空</div>`;
+    const countHtml = p.annotations.length
+      ? `<span class="tab-ann-count">${p.annotations.length}</span>` : '';
+    const closeHtml = pages.length > 1
+      ? `<button class="tab-close" onclick="event.stopPropagation();removePage(${i})">✕</button>` : '';
+    return `
+      <div class="page-tab ${isActive ? 'active' : ''}"
+        draggable="true"
+        onclick="activatePage(${i})"
+        ondragstart="onTabDragStart(event,${i})"
+        ondragover="onTabDragOver(event,${i})"
+        ondrop="onTabDrop(event,${i})"
+        ondragend="onTabDragEnd(event)">
+        ${thumbHtml}
+        <span class="tab-label" onclick="renamePage(${i},event)" title="クリックで名前変更">${escHtml(p.label || 'ページ ' + (i+1))}</span>
+        ${countHtml}
+        ${closeHtml}
+      </div>
+    `;
+  }).join('') + `<button class="btn-add-page" onclick="addPage()">＋ ページを追加</button>`;
+}
+
+// ===== IMAGE LOAD =====
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadImageFile(e.target.files[0]); });
+
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
+});
+panel.addEventListener('dragover', e => e.preventDefault());
+panel.addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
+});
+document.addEventListener('paste', e => {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.startsWith('image/')) { loadImageFile(items[i].getAsFile()); break; }
+  }
+});
+
+function loadImageFile(file) {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    const p = pg();
+    p.imgEl = img;
+    const maxW = panel.clientWidth - 48;
+    const scale = Math.min(maxW / img.naturalWidth, 2);
+    p.canvasW = Math.round(img.naturalWidth  * scale);
+    p.canvasH = Math.round(img.naturalHeight * scale);
+    canvas.width  = p.canvasW * dpr;
+    canvas.height = p.canvasH * dpr;
+    canvas.style.width  = p.canvasW + 'px';
+    canvas.style.height = p.canvasH + 'px';
+    // Generate thumbnail
+    const tc = document.createElement('canvas');
+    tc.width = 48; tc.height = Math.round(48 * p.canvasH / p.canvasW);
+    tc.getContext('2d').drawImage(img, 0, 0, tc.width, tc.height);
+    p.thumbnail = tc.toDataURL('image/jpeg', 0.7);
+    dropZone.style.display = 'none';
+    container.style.display = 'block';
+    panel.scrollTop = 0;
+    document.getElementById('btn-replace').style.display = 'flex';
+    render();
+    rebuildPageStrip();
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+
+// ===== RENDER =====
+function render() {
+  const p = pg();
+  if (!p.imgEl) { ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
+  ctx.save();
+  ctx.scale(dpr, dpr); // Retina対応：CSSピクセル座標で描画し、物理ピクセル解像度で出力
+  ctx.clearRect(0, 0, p.canvasW, p.canvasH);
+  ctx.drawImage(p.imgEl, 0, 0, p.canvasW, p.canvasH);
+  p.annotations.forEach(ann => {
+    if (ann.type === 'pin') drawPin(ctx, ann.x, ann.y, ann.num);
+    else                     drawBox(ctx, ann.x, ann.y, ann.w, ann.h, ann.num);
+  });
+  if (dragState && currentTool === 'box') {
+    const x = Math.min(dragState.sx, dragState.cx), y = Math.min(dragState.sy, dragState.cy);
+    const w = Math.abs(dragState.cx - dragState.sx), h = Math.abs(dragState.cy - dragState.sy);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(224,48,48,0.75)'; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
+    ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = 'rgba(224,48,48,0.06)'; ctx.fillRect(x, y, w, h);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// ===== DRAW HELPERS (ctx as param — used for both canvas and PDF offscreen) =====
+// scale=1 は画面表示用、PDF出力時は scale=2 を渡して赤マークを大きく描く
+function drawPin(c, x, y, num, scale = 1) {
+  const r = 14 * scale;
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 8 * scale; c.shadowOffsetY = 2 * scale;
+  c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2);
+  c.fillStyle = '#e03030'; c.fill();
+  c.strokeStyle = '#fff'; c.lineWidth = 2.5 * scale; c.stroke();
+  c.restore();
+  c.fillStyle = '#fff';
+  c.font = `bold ${(num > 9 ? 9 : 11) * scale}px -apple-system,sans-serif`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(num, x, y + 0.5 * scale);
+}
+
+function drawBox(c, x, y, w, h, num, scale = 1) {
+  c.save();
+  c.strokeStyle = '#e03030'; c.lineWidth = 2.5 * scale; c.setLineDash([]);
+  c.strokeRect(x, y, w, h);
+  c.fillStyle = 'rgba(224,48,48,0.07)'; c.fillRect(x, y, w, h);
+  const r = 13 * scale, bx = x + r + 2 * scale, by = y + r + 2 * scale;
+  c.shadowColor = 'rgba(0,0,0,0.4)'; c.shadowBlur = 6 * scale; c.shadowOffsetY = 2 * scale;
+  c.beginPath(); c.arc(bx, by, r, 0, Math.PI * 2);
+  c.fillStyle = '#e03030'; c.fill();
+  c.strokeStyle = '#fff'; c.lineWidth = 2 * scale; c.stroke();
+  c.restore();
+  c.fillStyle = '#fff';
+  c.font = `bold ${(num > 9 ? 9 : 11) * scale}px -apple-system,sans-serif`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(num, bx, by + 0.5 * scale);
+}
+
+// Render a page to a data URL（annScale=2 でPDF用に赤マークを大きく描画）
+// format: 'image/png'（PDF用・デフォルト）または 'image/jpeg'（HTML書き出し用）
+// quality: JPEG品質 0〜1（PNGの場合は無視される）
+function pageToDataURL(p, annScale = 1, format = 'image/png', quality = 1) {
+  const oc = document.createElement('canvas');
+  oc.width = p.canvasW; oc.height = p.canvasH;
+  const oc_ctx = oc.getContext('2d');
+  oc_ctx.drawImage(p.imgEl, 0, 0, p.canvasW, p.canvasH);
+  p.annotations.forEach(ann => {
+    if (ann.type === 'pin') drawPin(oc_ctx, ann.x, ann.y, ann.num, annScale);
+    else                     drawBox(oc_ctx, ann.x, ann.y, ann.w, ann.h, ann.num, annScale);
+  });
+  return oc.toDataURL(format, quality);
+}
+
+// ===== MOUSE =====
+function canvasPos(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+canvas.addEventListener('mousedown', e => {
+  const pos = canvasPos(e);
+  if (currentTool === 'pin') addAnnotation({ type: 'pin', x: pos.x, y: pos.y });
+  else dragState = { sx: pos.x, sy: pos.y, cx: pos.x, cy: pos.y };
+});
+// mousemove / mouseup は document レベルで監視する（canvas外でもドラッグを継続するため）
+document.addEventListener('mousemove', e => {
+  if (!dragState) return;
+  const pos = canvasPos(e); dragState.cx = pos.x; dragState.cy = pos.y; render();
+});
+document.addEventListener('mouseup', e => {
+  if (!dragState) return;
+  const pos = canvasPos(e);
+  const w = pos.x - dragState.sx, h = pos.y - dragState.sy;
+  if (Math.abs(w) > 10 && Math.abs(h) > 10) {
+    addAnnotation({ type: 'box', x: Math.min(dragState.sx, pos.x), y: Math.min(dragState.sy, pos.y), w: Math.abs(w), h: Math.abs(h) });
+  }
+  dragState = null; render();
+});
+// mouseleave は削除（document レベルで追跡するため不要）
+
+// ===== ANNOTATIONS =====
+function addAnnotation(data) {
+  const p = pg();
+  p.redoStack = []; // 新規追加時はredoをクリア
+  const ann = { ...data, num: p.nextNum++, id: Date.now(), text: '', images: [] };
+  p.annotations.push(ann);
+  render(); rebuildSidebar(); rebuildPageStrip();
+  setTimeout(() => {
+    const items = document.querySelectorAll('.ann-text');
+    if (items.length) items[items.length - 1].focus();
+  }, 40);
+}
+function removeAnnotation(id) {
+  const p = pg();
+  p.annotations = p.annotations.filter(a => a.id !== id);
+  p.annotations.forEach((a, i) => a.num = i + 1);
+  p.nextNum = p.annotations.length + 1;
+  render(); rebuildSidebar(); rebuildPageStrip();
+}
+function undoLast() {
+  const p = pg();
+  if (!p.annotations.length) return;
+  const removed = p.annotations.pop();
+  p.redoStack.push(removed);
+  p.nextNum = p.annotations.length + 1;
+  render(); rebuildSidebar(); rebuildPageStrip();
+}
+function redoLast() {
+  const p = pg();
+  if (!p.redoStack.length) return;
+  const ann = p.redoStack.pop();
+  ann.num = p.nextNum++;
+  p.annotations.push(ann);
+  render(); rebuildSidebar(); rebuildPageStrip();
+}
+function clearPage() {
+  const p = pg();
+  if (p.annotations.length && !confirm('このページの全指示を削除しますか？')) return;
+  p.annotations = []; p.nextNum = 1;
+  render(); rebuildSidebar(); rebuildPageStrip();
+}
+function renamePage(idx, e) {
+  e.stopPropagation();
+  // 非アクティブなタブはまず切り替えだけ行う（再クリックで編集へ）
+  if (curIdx !== idx) {
+    activatePage(idx);
+    return;
+  }
+  // アクティブなタブ：インライン編集開始
+  const span = e.currentTarget;
+  if (span.querySelector('input')) return; // すでに編集中
+  const current = pages[idx].label || 'ページ ' + (idx + 1);
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.style.cssText = 'font-size:0.72rem;font-weight:600;background:transparent;border:none;border-bottom:1.5px solid #555;outline:none;color:inherit;width:80px;padding:0;font-family:inherit;';
+  span.textContent = '';
+  span.appendChild(input);
+  input.focus(); input.select();
+  function commit() {
+    const val = input.value.trim() || current;
+    pages[idx].label = val;
+    rebuildPageStrip();
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+    if (ev.key === 'Escape') { input.value = current; input.blur(); }
+  });
+}
+
+// ===== PAGE TAB DRAG & DROP =====
+let _dragPageIdx = null;
+
+function onTabDragStart(e, idx) {
+  _dragPageIdx = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('dragging');
+}
+function onTabDragOver(e, idx) {
+  if (_dragPageIdx === null || _dragPageIdx === idx) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.page-tab.drag-over').forEach(t => t.classList.remove('drag-over'));
+  e.currentTarget.classList.add('drag-over');
+}
+function onTabDrop(e, idx) {
+  e.preventDefault();
+  if (_dragPageIdx === null || _dragPageIdx === idx) return;
+  const dragged = pages.splice(_dragPageIdx, 1)[0];
+  pages.splice(idx, 0, dragged);
+  // curIdx の追従
+  if (curIdx === _dragPageIdx) {
+    curIdx = idx;
+  } else if (_dragPageIdx < idx && curIdx > _dragPageIdx && curIdx <= idx) {
+    curIdx--;
+  } else if (_dragPageIdx > idx && curIdx >= idx && curIdx < _dragPageIdx) {
+    curIdx++;
+  }
+  _dragPageIdx = null;
+  activatePage(curIdx);
+}
+function onTabDragEnd(e) {
+  _dragPageIdx = null;
+  document.querySelectorAll('.page-tab').forEach(t => {
+    t.classList.remove('dragging'); t.classList.remove('drag-over');
+  });
+}
+
+// ===== SIDEBAR =====
+function rebuildSidebar() {
+  const list  = document.getElementById('annotation-list');
+  const badge = document.getElementById('ann-badge');
+  const p = pg();
+  badge.textContent = p.annotations.length;
+  badge.className = 'ann-count-badge' + (p.annotations.length ? '' : ' zero');
+  if (!p.annotations.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📍</div>${p.imgEl ? '画像をクリックして<br>修正箇所を追加' : '画像をアップロードして<br>修正箇所をクリックで追加'}</div>`;
+    return;
+  }
+  const saved = {};
+  document.querySelectorAll('.ann-text[data-id]').forEach(el => { saved[el.dataset.id] = el.value; });
+  list.innerHTML = p.annotations.map(ann => {
+    const imgs = (ann.images && ann.images.length)
+      ? `<div class="ann-images">${ann.images.map((src, idx) => `
+          <div class="ann-img-wrap">
+            <img class="ann-img-thumb" src="${src}" alt="" onclick="openImgPreview('${src}')">
+            <button class="ann-img-remove" onclick="removeAnnImage(${ann.id}, ${idx})" title="削除">✕</button>
+          </div>`).join('')}</div>`
+      : '';
+    return `
+    <div class="annotation-item" id="item-${ann.id}">
+      <div class="ann-header">
+        <span class="ann-num">${ann.num}</span>
+        <span class="ann-type-label">${ann.type === 'pin' ? '📍 ピン' : '□ エリア指定'}</span>
+        <button class="ann-delete" onclick="removeAnnotation(${ann.id})" title="削除">✕</button>
+      </div>
+      <textarea class="ann-text" data-id="${ann.id}"
+        placeholder="修正依頼を記入&#10;例：フォントを明朝体→ゴシック体に変更"
+        oninput="syncText(${ann.id}, this.value)">${escHtml(ann.text)}</textarea>
+      ${imgs}
+      <button class="btn-attach" onclick="attachImageToAnn(${ann.id})">
+        <svg width="14" height="14" viewBox="0 0 40 40"><path d="M32,6H8a4.00458,4.00458,0,0,0-4,4V30a4.00458,4.00458,0,0,0,4,4H32a4.00458,4.00458,0,0,0,4-4V10A4.00458,4.00458,0,0,0,32,6ZM8,8H32a2.002,2.002,0,0,1,2,2V22.58594l-5.293-5.293a.99962.99962,0,0,0-1.41406,0l-8.793,8.793-4.793-4.793a.99962.99962,0,0,0-1.41406,0L6,27.58594V10A2.002,2.002,0,0,1,8,8ZM6.03265,30.32288A.95562.95562,0,0,0,6.207,30.207L13,23.41406,17.08594,27.5l-4.5,4.5H8A1.9979,1.9979,0,0,1,6.03265,30.32288ZM32,32H15.41406L28,19.41406l6,6V30A2.002,2.002,0,0,1,32,32Z"/><path d="M18,20a5,5,0,1,0-5-5A5.00588,5.00588,0,0,0,18,20Zm0-8a3,3,0,1,1-3,3A3.00328,3.00328,0,0,1,18,12Z"/></svg>
+        添付ファイル
+      </button>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.ann-text[data-id]').forEach(el => {
+    const id = el.dataset.id;
+    if (saved[id] !== undefined) {
+      el.value = saved[id];
+      const ann = p.annotations.find(a => a.id == id);
+      if (ann) ann.text = saved[id];
+    }
+  });
+}
+function syncText(id, value) {
+  const ann = pg().annotations.find(a => a.id === id);
+  if (ann) ann.text = value;
+}
+
+// ===== IMAGE ATTACHMENT =====
+let _pendingAttachAnnId = null;
+
+function attachImageToAnn(annId) {
+  _pendingAttachAnnId = annId;
+  const inp = document.getElementById('ann-img-input');
+  inp.value = '';
+  inp.click();
+}
+
+document.getElementById('ann-img-input').addEventListener('change', e => {
+  if (!e.target.files[0] || _pendingAttachAnnId === null) return;
+  const file = e.target.files[0];
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const ann = pg().annotations.find(a => a.id === _pendingAttachAnnId);
+    if (ann) {
+      if (!ann.images) ann.images = [];
+      ann.images.push(ev.target.result);
+      rebuildSidebar();
+    }
+    _pendingAttachAnnId = null;
+  };
+  reader.readAsDataURL(file);
+});
+
+function removeAnnImage(annId, imgIdx) {
+  const ann = pg().annotations.find(a => a.id === annId);
+  if (ann && ann.images) { ann.images.splice(imgIdx, 1); rebuildSidebar(); }
+}
+
+// ===== ANNOTATION ITEM: DRAG & DROP IMAGE ATTACH =====
+(function() {
+  const list = document.getElementById('annotation-list');
+
+  list.addEventListener('dragover', e => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    const item = e.target.closest('.annotation-item');
+    if (!item) return;
+    e.preventDefault();
+    // drag-over クラスを今のアイテムのみに付ける
+    list.querySelectorAll('.annotation-item.drag-over').forEach(el => {
+      if (el !== item) el.classList.remove('drag-over');
+    });
+    item.classList.add('drag-over');
+  });
+
+  list.addEventListener('dragleave', e => {
+    const item = e.target.closest('.annotation-item');
+    if (!item) return;
+    // relatedTarget がアイテム内にあればリーブしていない
+    if (item.contains(e.relatedTarget)) return;
+    item.classList.remove('drag-over');
+  });
+
+  list.addEventListener('drop', e => {
+    const item = e.target.closest('.annotation-item');
+    if (!item) return;
+    e.preventDefault();
+    item.classList.remove('drag-over');
+
+    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+    if (!file) return;
+
+    const annId = Number(item.id.replace('item-', ''));
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const ann = pg().annotations.find(a => a.id === annId);
+      if (ann) {
+        if (!ann.images) ann.images = [];
+        ann.images.push(ev.target.result);
+        rebuildSidebar();
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+})();
+
+function openImgPreview(src) {
+  document.getElementById('img-preview-img').src = src;
+  document.getElementById('img-preview-overlay').classList.add('show');
+}
+function closeImgPreview() {
+  document.getElementById('img-preview-overlay').classList.remove('show');
+  document.getElementById('img-preview-img').src = '';
+}
+document.getElementById('img-preview-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('img-preview-overlay')) closeImgPreview();
+});
+
+// ===== UTILS =====
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== SCRIPT LOADER =====
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+// ===== HTML EXPORT =====
+// 全アノテーションデータ・画像・テキストをbase64埋め込みした自己完結型HTMLを生成・ダウンロード
+function exportHTML() {
+  // scriptタグをソースコード上に直接書くとHTMLパーサーがブロックを強制終了するため
+  // 変数に分割して ${}展開で渡す
+  const _so = '<' + 'script>';
+  const _sc = '</' + 'script>';
+
+  // DOMからテキストを同期
+  document.querySelectorAll('.ann-text[data-id]').forEach(el => {
+    const ann = pg().annotations.find(a => a.id == el.dataset.id);
+    if (ann) ann.text = el.value;
+  });
+
+  const withImg = pages.filter(p => p.imgEl);
+  if (!withImg.length) { alert('画像をアップロードしてください。'); return; }
+
+  const project     = document.getElementById('meta-project').value || '修正依頼';
+  const htmlname    = document.getElementById('meta-pdfname').value || `デザイン修正依頼_${project}`;
+  const deadline    = document.getElementById('meta-deadline').value;
+  const today       = new Date().toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' });
+  const deadlineStr = deadline
+    ? new Date(deadline).toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' }) : '';
+
+  // 各ページのアノテーション済み画像をJPEG圧縮でdata URL化（PNGより50〜70%軽量）
+  const pageImages = withImg.map(p => pageToDataURL(p, 1.28, 'image/jpeg', 0.70));
+
+  // ページナビHTMLを生成（2ページ以上の場合のみ）
+  const navHtml = withImg.length > 1
+    ? `<nav class="page-nav">
+        <span class="page-nav-label">ページ</span>
+        ${withImg.map((p, pi) => `<a class="page-nav-btn" href="#page-${pi}">${escHtml(p.label || 'ページ ' + (pi + 1))}</a>`).join('')}
+      </nav>` : '';
+
+  // ページブロックHTMLを生成
+  const pagesHtml = withImg.map((p, pi) => {
+    const imgSrc = pageImages[pi];
+    const annRows = p.annotations.length
+      ? p.annotations.map(ann => {
+          const txt = escHtml(ann.text || '（指示未記入）').replace(/\n/g, '<br>');
+          const imgsHtml = (ann.images && ann.images.length)
+            ? `<div class="att-imgs">${ann.images.map(src =>
+                `<img src="${src}" class="att-img" alt="">`
+              ).join('')}</div>`
+            : '';
+          return `
+            <div class="ann-row">
+              <div class="ann-num">${ann.num}</div>
+              <div class="ann-body">
+                <div class="ann-type">${ann.type === 'pin' ? 'ピン指定' : 'エリア指定'}</div>
+                <div class="ann-text">${txt}</div>
+                ${imgsHtml}
+              </div>
+            </div>`;
+        }).join('')
+      : '<div class="no-ann">修正指示はありません</div>';
+
+    const pageLabel = escHtml(p.label || 'ページ ' + (pi + 1));
+    const pageLabelHtml = `<div class="page-label">${pageLabel}</div>`;
+
+    return `
+      <div class="page-block" id="page-${pi}">
+        <div class="sticky-zoom-bar">
+          <div class="zoom-section zoom-section-left">
+            <span class="zoom-section-label">画像</span>
+            <button class="zoom-btn" onclick="zoomImg(this,-0.2)" title="縮小">−</button>
+            <span class="zoom-label">100%</span>
+            <button class="zoom-btn" onclick="zoomImg(this,0.2)" title="拡大">＋</button>
+            <button class="zoom-btn zoom-reset" onclick="resetImg(this)">リセット</button>
+          </div>
+          <div class="zoom-section zoom-section-right">
+            <span class="zoom-section-label">添付画像</span>
+            <button class="zoom-btn" onclick="zoomAnn(this,-0.2)" title="縮小">−</button>
+            <span class="zoom-label">100%</span>
+            <button class="zoom-btn" onclick="zoomAnn(this,0.2)" title="拡大">＋</button>
+            <button class="zoom-btn zoom-reset" onclick="resetAnn(this)">リセット</button>
+          </div>
+        </div>
+        <div class="page-cols">
+          <div class="col-img">
+            <div class="img-scroll">
+              <img src="${imgSrc}" alt="ページ ${pi + 1}" data-scale="1">
+            </div>
+          </div>
+          <div class="col-sep"></div>
+          <div class="col-ann">
+            ${pageLabelHtml}
+            <div class="ann-list-title">変更リスト</div>
+            ${annRows}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escHtml(htmlname)}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+      background: #f0f0ec; color: #1a1a1a; padding: 24px;
+    }
+    .doc { max-width: 1000px; margin: 0 auto; }
+    .doc-header {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      padding-bottom: 10px; border-bottom: 2.5px solid #1a1a1a; margin-bottom: 8px;
+    }
+    .doc-title { font-size: 20px; font-weight: 800; letter-spacing: 0.02em; display: flex; align-items: center; gap: 8px; }
+    .doc-title-dot { width: 10px; height: 10px; border-radius: 50%; background: #e8613a; flex-shrink: 0; display: inline-block; }
+    .doc-meta { font-size: 11px; color: #666; text-align: right; line-height: 2; }
+    .project-bar {
+      background: #f5f5f1; padding: 6px 12px; font-size: 12px;
+      border-radius: 4px; margin-bottom: 20px;
+    }
+    .project-bar strong { color: #555; }
+    .page-nav {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      margin-bottom: 16px; padding: 8px 12px;
+      background: #f5f5f1; border-radius: 6px;
+    }
+    .page-nav-label {
+      font-size: 9px; font-weight: 700; color: #aaa;
+      letter-spacing: 0.1em; text-transform: uppercase; margin-right: 2px; flex-shrink: 0;
+    }
+    .page-nav-btn {
+      text-decoration: none; background: #fff; border: 1px solid #ddd;
+      border-radius: 20px; padding: 3px 12px; font-size: 11px; color: #666;
+      transition: all 0.14s; white-space: nowrap;
+    }
+    .page-nav-btn:hover { border-color: #999; color: #1a1a1a; background: #f7f7f5; }
+    .back-top {
+      position: fixed; bottom: 24px; right: 24px; z-index: 100;
+      background: #e8613a; color: #fff; border: none; border-radius: 20px;
+      padding: 7px 16px; font-size: 11px; font-family: inherit; cursor: pointer;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+      display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+    .back-top.show { opacity: 1; pointer-events: auto; }
+    .back-top:hover { background: #d45530; }
+    .page-block {
+      background: #fff; border-radius: 8px; margin-bottom: 20px;
+      overflow: clip; box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    .sticky-zoom-bar {
+      position: sticky; top: 0; z-index: 10;
+      background: #f7f7f5; border-bottom: 1px solid #e0e0dc;
+      display: flex; align-items: center; gap: 0; padding: 0;
+    }
+    .zoom-section {
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 12px;
+    }
+    .zoom-section-left { width: 62%; flex-shrink: 0; box-sizing: border-box; }
+    .zoom-section-right { flex: 1; border-left: 1px solid #e0e0dc; }
+    .att-imgs { overflow: auto; }
+    .att-img { transition: width 0.12s; }
+    .zoom-section-label {
+      font-size: 9px; font-weight: 700; color: #aaa;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-right: 4px; white-space: nowrap;
+    }
+    .zoom-btn {
+      width: 22px; height: 22px; border: 1px solid #ddd; border-radius: 4px;
+      background: #fff; cursor: pointer; font-size: 13px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      color: #555; flex-shrink: 0; font-family: inherit;
+    }
+    .zoom-btn:hover { background: #f0f0ec; border-color: #bbb; }
+    .zoom-reset { font-size: 10px; width: auto; padding: 0 7px; }
+    .zoom-label { font-size: 11px; color: #888; min-width: 34px; text-align: center; }
+    .page-cols { display: flex; align-items: flex-start; }
+    .col-img { width: 62%; flex-shrink: 0; }
+    .img-scroll { padding: 16px; overflow: auto; }
+    .col-img img { width: 100%; height: auto; display: block; border-radius: 3px; transition: width 0.12s; }
+    .col-sep { width: 1px; background: #e8e8e4; align-self: stretch; flex-shrink: 0; }
+    .col-ann { flex: 1; padding: 16px; min-width: 0; }
+    .page-label {
+      font-size: 9px; font-weight: 700; color: #aaa; letter-spacing: 0.1em;
+      text-transform: uppercase; margin-bottom: 8px; padding-bottom: 5px;
+      border-bottom: 1px solid #eee;
+    }
+    .ann-list-title {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: #aaa;
+      text-transform: uppercase; margin-bottom: 10px; padding-bottom: 5px;
+      border-bottom: 1px solid #eee;
+    }
+    .ann-row {
+      display: flex; gap: 8px; margin-bottom: 10px; padding-bottom: 10px;
+      border-bottom: 1px solid #f0f0ee;
+    }
+    .ann-row:last-child { border-bottom: none; margin-bottom: 0; }
+    .ann-num {
+      width: 18px; height: 18px; min-width: 18px; background: #e03030;
+      color: #fff; border-radius: 50%; font-size: 8px; font-weight: 700;
+      text-align: center; line-height: 18px; flex-shrink: 0;
+    }
+    .ann-body { flex: 1; min-width: 0; }
+    .ann-type { font-size: 9px; color: #bbb; margin-bottom: 3px; }
+    .ann-text { font-size: 12px; line-height: 1.65; color: #1a1a1a; word-break: break-all; user-select: text; }
+    .no-ann { font-size: 12px; color: #bbb; }
+    .att-imgs { margin-top: 7px; display: flex; flex-direction: column; gap: 5px; }
+    .att-img { width: 100%; height: auto; border-radius: 3px; border: 1px solid #e0e0e0; display: block; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .doc { max-width: 100%; }
+      .page-block {
+        box-shadow: none; border-radius: 0; margin-bottom: 0;
+        page-break-after: always; break-after: always;
+        page-break-inside: avoid; break-inside: avoid;
+      }
+      .page-block:last-child { page-break-after: avoid; break-after: avoid; }
+      .page-cols { page-break-inside: avoid; break-inside: avoid; }
+      .col-img img {
+        max-height: 220mm;
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+      }
+    }
+  </style>
+</head>
+<body>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">▲ トップへ</button>
+<div class="doc">
+  <div class="doc-header">
+    <span class="doc-title"><span class="doc-title-dot"></span>デザイン修正依頼書</span>
+    <div class="doc-meta">
+      <div>作成日：${today}</div>
+      ${deadlineStr ? `<div>修正納期：${deadlineStr}</div>` : ''}
+    </div>
+  </div>
+  <div class="project-bar"><strong>案件名</strong>&ensp;${escHtml(project)}</div>
+  ${navHtml}
+  ${pagesHtml}
+</div>
+${_so}
+function zoomImg(btn, delta) {
+  const page = btn.closest('.page-block');
+  const img = page.querySelector('.col-img img');
+  const label = btn.closest('.zoom-section').querySelector('.zoom-label');
+  let scale = parseFloat(img.dataset.scale) || 1;
+  scale = Math.min(4, Math.max(0.25, Math.round((scale + delta) * 100) / 100));
+  img.dataset.scale = scale;
+  img.style.width = (scale * 100) + '%';
+  label.textContent = Math.round(scale * 100) + '%';
+}
+function resetImg(btn) {
+  const page = btn.closest('.page-block');
+  const img = page.querySelector('.col-img img');
+  const label = btn.closest('.zoom-section').querySelector('.zoom-label');
+  img.dataset.scale = 1;
+  img.style.width = '100%';
+  label.textContent = '100%';
+}
+function zoomAnn(btn, delta) {
+  const page = btn.closest('.page-block');
+  const ann = page.querySelector('.col-ann');
+  const imgs = ann.querySelectorAll('.att-img');
+  const label = btn.closest('.zoom-section').querySelector('.zoom-label');
+  let scale = parseFloat(ann.dataset.annScale) || 1;
+  scale = Math.min(4, Math.max(0.25, Math.round((scale + delta) * 100) / 100));
+  ann.dataset.annScale = scale;
+  imgs.forEach(img => { img.style.width = (scale * 100) + '%'; });
+  label.textContent = Math.round(scale * 100) + '%';
+}
+function resetAnn(btn) {
+  const page = btn.closest('.page-block');
+  const ann = page.querySelector('.col-ann');
+  const imgs = ann.querySelectorAll('.att-img');
+  const label = btn.closest('.zoom-section').querySelector('.zoom-label');
+  ann.dataset.annScale = 1;
+  imgs.forEach(img => { img.style.width = '100%'; });
+  label.textContent = '100%';
+}
+document.querySelectorAll('.img-scroll').forEach(scroll => {
+  scroll.addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const page = scroll.closest('.page-block');
+    const btn = page.querySelector('.zoom-section-left .zoom-btn');
+    zoomImg(btn, e.deltaY > 0 ? -0.1 : 0.1);
+  }, { passive: false });
+});
+document.querySelectorAll('.col-ann').forEach(ann => {
+  ann.addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const page = ann.closest('.page-block');
+    const btn = page.querySelector('.zoom-section-right .zoom-btn');
+    zoomAnn(btn, e.deltaY > 0 ? -0.1 : 0.1);
+  }, { passive: false });
+});
+// トップへ戻るボタンの表示制御
+const _bt = document.getElementById('back-top');
+if (_bt) {
+  window.addEventListener('scroll', () => {
+    _bt.classList.toggle('show', window.scrollY > 300);
+  });
+}
+${_sc}
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = htmlname.replace(/[\\/:*?"<>|]/g, '_') + '.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ===== PDF EXPORT (jsPDF 直接配置 + html2canvas テキスト部のみ) =====
+// ページ高さを画像の縦幅に合わせて可変にする（A4縦幅に縛らない）。
+// 画面上での確認用途のため印刷は考慮しない。
+async function exportPDF() {
+  document.querySelectorAll('.ann-text[data-id]').forEach(el => {
+    const ann = pg().annotations.find(a => a.id == el.dataset.id);
+    if (ann) ann.text = el.value;
+  });
+
+  const withImg = pages.filter(p => p.imgEl);
+  if (!withImg.length) { alert('画像をアップロードしてください。'); return; }
+
+  const project     = document.getElementById('meta-project').value || '修正依頼';
+  const pdfname     = document.getElementById('meta-pdfname').value;
+  const deadline    = document.getElementById('meta-deadline').value;
+  const today       = new Date().toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' });
+  const deadlineStr = deadline
+    ? new Date(deadline).toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' }) : '';
+
+  const overlay = document.getElementById('loading-overlay');
+  overlay.classList.add('show');
+  await new Promise(r => setTimeout(r, 50));
+
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  } catch(e) {
+    overlay.classList.remove('show');
+    alert('ライブラリの読み込みに失敗しました。\nインターネット接続を確認してから再度お試しください。');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+
+  // ===== レイアウト定数 (mm) =====
+  const PDF_W       = 210;
+  const MX          = 13, MY = 12;
+  const CW          = PDF_W - 2 * MX;   // 184mm
+  const COL_GAP_MM  = 5;
+  const IMG_COL_MM  = CW * 0.62;        // ~114mm（固定）
+  const ANN_COL_MM  = CW - IMG_COL_MM - COL_GAP_MM; // ~65mm（固定）
+  const ANN_RENDER_W    = 280;  // px
+  const HEADER_RENDER_W = 760;  // px
+
+  // 一時DOMノード（html2canvas 用）
+  function mkNode(w) {
+    const d = document.createElement('div');
+    d.style.cssText = [
+      'position:fixed', 'left:-9999px', 'top:0',
+      `width:${w}px`, 'background:#fff',
+      "font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN',Meiryo,sans-serif",
+      'color:#1a1a1a', 'line-height:1.6', 'box-sizing:border-box', 'padding:0',
+    ].join(';');
+    document.body.appendChild(d);
+    return d;
+  }
+  async function renderNode(node) {
+    const c = await html2canvas(node, {
+      scale: 2, useCORS: true, allowTaint: true, logging: false,
+      backgroundColor: '#ffffff',
+      width: parseInt(node.style.width),
+      height: node.scrollHeight,
+    });
+    document.body.removeChild(node);
+    return c;
+  }
+
+  // ===== フェーズ1：ヘッダーをレンダリング =====
+  const hdrNode = mkNode(HEADER_RENDER_W);
+  hdrNode.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;
+        padding-bottom:8px;border-bottom:2.5px solid #1a1a1a;margin-bottom:6px;">
+      <span style="font-size:19px;font-weight:800;letter-spacing:0.02em;">デザイン修正依頼書</span>
+      <div style="font-size:9px;color:#666;text-align:right;line-height:2;">
+        <div>作成日：${today}</div>
+        ${deadlineStr ? `<div>修正納期：${deadlineStr}</div>` : ''}
+      </div>
+    </div>
+    <div style="background:#f5f5f1;padding:5px 10px;font-size:10px;border-radius:4px;">
+      <strong style="color:#555;">案件名</strong>&ensp;${escHtml(project)}
+    </div>`;
+  const hdrCanvas = await renderNode(hdrNode);
+  const hdrH_MM = hdrCanvas.height / hdrCanvas.width * CW; // ヘッダー実高さ (mm)
+
+  // ===== フェーズ2：全ページのデータを事前処理（ページ高さ算出のため） =====
+  const pageData = [];
+  for (let pi = 0; pi < withImg.length; pi++) {
+    const p = withImg[pi];
+
+    // 画像は縦幅制限なし：左カラム幅いっぱいに展開
+    const imgAspect = p.canvasH / p.canvasW;
+    const imgW_mm   = IMG_COL_MM;
+    const imgH_mm   = imgAspect * IMG_COL_MM; // 縦長でもそのまま
+
+    // 指示リストをレンダリング（高さ取得のため）
+    const pageLabel = withImg.length > 1
+      ? `<p style="font-size:8px;font-weight:700;color:#aaa;letter-spacing:0.1em;
+             text-transform:uppercase;margin:0 0 8px;padding-bottom:5px;border-bottom:1px solid #eee;">
+             PAGE ${pi + 1} / ${withImg.length}</p>` : '';
+    const annRows = p.annotations.length
+      ? p.annotations.map(ann => {
+          const txt = (ann.text || '（指示未記入）')
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/\n/g,'<br>');
+          return `
+            <div style="display:flex;gap:7px;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid #f0f0ee;">
+              <div style="width:17px;height:17px;min-width:17px;background:#e03030;color:#fff;
+                  border-radius:50%;font-size:7.5px;font-weight:700;text-align:center;line-height:17px;">
+                ${ann.num}</div>
+              <div>
+                <div style="font-size:8px;color:#bbb;margin-bottom:2px;">
+                  ${ann.type === 'pin' ? 'ピン指定' : 'エリア指定'}</div>
+                <div style="font-size:9.5px;line-height:1.65;color:#1a1a1a;">${txt}</div>
+              </div>
+            </div>`;
+        }).join('')
+      : `<div style="font-size:9.5px;color:#bbb;">修正指示はありません</div>`;
+
+    // 添付画像を各アノテーション行に追加（既にレンダリング済みのHTMLに注入）
+    const annRowsWithImgs = p.annotations.length
+      ? p.annotations.map(ann => {
+          const txt = (ann.text || '（指示未記入）')
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/\n/g,'<br>');
+          const attachedImgsHtml = (ann.images && ann.images.length)
+            ? `<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px;">
+                ${ann.images.map(src => `<img src="${src}" style="width:100%;height:auto;border-radius:3px;border:1px solid #e0e0e0;display:block;">`).join('')}
+               </div>` : '';
+          return `
+            <div style="display:flex;gap:7px;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid #f0f0ee;">
+              <div style="width:17px;height:17px;min-width:17px;background:#e03030;color:#fff;
+                  border-radius:50%;font-size:7.5px;font-weight:700;text-align:center;line-height:17px;">
+                ${ann.num}</div>
+              <div style="flex:1;">
+                <div style="font-size:8px;color:#bbb;margin-bottom:2px;">
+                  ${ann.type === 'pin' ? 'ピン指定' : 'エリア指定'}</div>
+                <div style="font-size:9.5px;line-height:1.65;color:#1a1a1a;">${txt}</div>
+                ${attachedImgsHtml}
+              </div>
+            </div>`;
+        }).join('')
+      : `<div style="font-size:9.5px;color:#bbb;">修正指示はありません</div>`;
+
+    const annNode = mkNode(ANN_RENDER_W);
+    annNode.innerHTML = `
+      ${pageLabel}
+      <p style="font-size:7.5px;font-weight:700;letter-spacing:0.1em;color:#aaa;
+          text-transform:uppercase;margin:0 0 8px;padding-bottom:5px;border-bottom:1px solid #eee;">
+          変更リスト</p>
+      ${annRowsWithImgs}`;
+    const annCanvas = await renderNode(annNode);
+    const annH_mm = annCanvas.height / annCanvas.width * ANN_COL_MM;
+
+    // コンテンツ高さ＝画像高さと指示リスト高さの大きい方
+    const contentH_mm = Math.max(imgH_mm, annH_mm);
+    // ヘッダーは1枚目のみ
+    const topH_mm = pi === 0 ? hdrH_MM + 4 : 0;
+    // ページ高さ＝上マージン＋ヘッダー＋コンテンツ＋下マージン
+    const pageH_mm = MY + topH_mm + contentH_mm + MY;
+
+    pageData.push({ p, imgW_mm, imgH_mm, annCanvas, annH_mm, contentH_mm, topH_mm, pageH_mm });
+  }
+
+  // ===== フェーズ3：PDFを生成 =====
+  // 最初のページ高さでPDFを初期化（幅は210mm固定）
+  const pdf = new jsPDF({ unit: 'mm', format: [PDF_W, pageData[0].pageH_mm], orientation: 'portrait' });
+
+  for (let pi = 0; pi < pageData.length; pi++) {
+    const { p, imgW_mm, imgH_mm, annCanvas, annH_mm, contentH_mm, topH_mm, pageH_mm } = pageData[pi];
+
+    // 2ページ目以降はそれぞれの高さでページ追加
+    if (pi > 0) pdf.addPage([PDF_W, pageH_mm]);
+
+    // ─── ヘッダー（1枚目のみ）───
+    let yContent = MY;
+    if (pi === 0) {
+      pdf.addImage(hdrCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', MX, MY, CW, hdrH_MM);
+      yContent = MY + hdrH_MM + 4;
+    }
+
+    // ─── 左カラム：アノテーション済み画像（赤マーク1.28倍サイズ）───
+    const imgData = pageToDataURL(p, 1.28);
+    pdf.addImage(imgData, 'PNG', MX, yContent, imgW_mm, imgH_mm);
+
+    // ─── 縦区切り線 ───
+    pdf.setDrawColor(220, 220, 220);
+    pdf.setLineWidth(0.25);
+    const sepX = MX + IMG_COL_MM + COL_GAP_MM / 2;
+    pdf.line(sepX, yContent, sepX, yContent + contentH_mm);
+
+    // ─── 右カラム：指示リスト ───
+    const annX_mm = MX + IMG_COL_MM + COL_GAP_MM;
+    pdf.addImage(
+      annCanvas.toDataURL('image/jpeg', 0.95), 'JPEG',
+      annX_mm, yContent, ANN_COL_MM, annH_mm
+    );
+  }
+
+  overlay.classList.remove('show');
+  const rawName  = pdfname || `デザイン修正依頼_${project}`;
+  const safeName = rawName.replace(/[\\/:*?"<>|]/g, '_');
+  pdf.save(`${safeName}.pdf`);
+}
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') { e.preventDefault(); redoLast(); return; }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); undoLast(); }
+  if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+    if (e.key === 'p') setTool('pin');
+    if (e.key === 'b') setTool('box');
+  }
+});
+
+// ===== INIT =====
+rebuildPageStrip();
+rebuildSidebar();
+</script>
+</body>
+</html>
