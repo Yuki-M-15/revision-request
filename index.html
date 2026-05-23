@@ -420,17 +420,13 @@
 
   <div class="sep"></div>
 
-  <button class="btn-ghost" id="btn-replace" style="display:none" onclick="document.getElementById('file-input').click()">
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-    差し替え
-  </button>
   <button id="btn-clear-storage" onclick="clearStorage()" title="保存データをすべて消去して最初からやり直す">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
     初期化
   </button>
   <button class="btn-ghost" onclick="openDraftPanel()" title="ドラフトを保存・読み込み">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-    ドラフト
+    ドラフトを保存
   </button>
 
   <div class="topbar-spacer"></div>
@@ -550,8 +546,6 @@ function activatePage(idx) {
     container.style.display = 'none';
   }
   panel.scrollTop = 0;
-  // Show/hide replace btn
-  document.getElementById('btn-replace').style.display = p.imgEl ? 'flex' : 'none';
   render();
   rebuildSidebar();
   rebuildPageStrip();
@@ -650,7 +644,6 @@ function loadImageFile(file) {
     dropZone.style.display = 'none';
     container.style.display = 'block';
     panel.scrollTop = 0;
-    document.getElementById('btn-replace').style.display = 'flex';
     render();
     rebuildPageStrip();
     saveToStorage();
@@ -1665,6 +1658,10 @@ function showSaveStatus(state) {
     el.textContent = '↩ データを復元しました';
     el.style.color = '#4a90d9';
     setTimeout(() => { el.textContent = '✓ 自動保存済み'; el.style.color = '#aaa'; }, 4000);
+  } else if (state === 'drafted') {
+    el.textContent = '✓ ドラフトに保存しました';
+    el.style.color = '#4a90d9';
+    setTimeout(() => { el.textContent = '✓ 自動保存済み'; el.style.color = '#aaa'; }, 3000);
   } else if (state === 'error') {
     el.textContent = '⚠ 保存失敗（容量不足）';
     el.style.color = '#d04040';
@@ -1728,6 +1725,16 @@ function buildDraftList() {
   }).join('');
 }
 
+function resetToFresh() {
+  pages = [newPage('ページ 1')];
+  curIdx = 0;
+  document.getElementById('meta-project').value  = '';
+  document.getElementById('meta-deadline').value = '';
+  document.getElementById('meta-pdfname').value  = '';
+  localStorage.removeItem(STORAGE_KEY);
+  activatePage(0);
+}
+
 function saveDraft() {
   // DOMのテキストを同期
   document.querySelectorAll('.ann-text[data-id]').forEach(el => {
@@ -1763,20 +1770,15 @@ function saveDraft() {
   };
   try {
     localStorage.setItem(key, JSON.stringify(data));
-    buildDraftList();
-    document.getElementById('draft-name-input').value = '';
-    const btn = document.querySelector('.btn-save-draft');
-    const orig = btn.textContent;
-    btn.textContent = '✓ 保存しました';
-    btn.disabled = true;
-    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1500);
+    closeDraftPanel();
+    resetToFresh();
+    showSaveStatus('drafted');
   } catch(e) {
     alert('保存に失敗しました。容量不足の可能性があります。');
   }
 }
 
 function loadDraft(key) {
-  if (!confirm('現在の作業内容はリセットされます。このドラフトを読み込みますか？')) return;
   try {
     const raw = localStorage.getItem(key);
     if (!raw) { alert('ドラフトが見つかりません。'); return; }
