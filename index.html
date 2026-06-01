@@ -1401,6 +1401,15 @@ async function exportPDF() {
     return d;
   }
   async function renderNode(node) {
+    // 添付画像がある場合、ロード完了を待ってから scrollHeight を確定する
+    const imgs = Array.from(node.querySelectorAll('img'));
+    if (imgs.length > 0) {
+      await Promise.all(imgs.map(img =>
+        (img.complete && img.naturalHeight > 0)
+          ? Promise.resolve()
+          : new Promise(resolve => { img.onload = img.onerror = resolve; })
+      ));
+    }
     const c = await html2canvas(node, {
       scale: 2, useCORS: true, allowTaint: true, logging: false,
       backgroundColor: '#ffffff',
@@ -1509,21 +1518,23 @@ async function exportPDF() {
       : Math.max(imgH_mm, annH_mm);   // 横並び（大きい方）
     // ヘッダーは1枚目のみ
     const topH_mm = pi === 0 ? hdrH_MM + 4 : 0;
-    // ページ高さ（最小値をPDF_Wに設定してjsPDFのdimension swapを防ぐ）
-    const pageH_mm = Math.max(PDF_W, MY + topH_mm + contentH_mm + MY);
+    // ページ高さは内容量に応じて可変（制限なし）
+    const pageH_mm = MY + topH_mm + contentH_mm + MY;
+    // jsPDFのdimension swap防止: pageH_mm < PDF_W のときlandscape指定で縦横スワップを回避
+    const pageOrient = pageH_mm < PDF_W ? 'l' : 'p';
 
-    pageData.push({ p, imgW_mm, imgH_mm, annCanvas, annH_mm, annColMM, contentH_mm, topH_mm, pageH_mm, isLandscape });
+    pageData.push({ p, imgW_mm, imgH_mm, annCanvas, annH_mm, annColMM, contentH_mm, topH_mm, pageH_mm, pageOrient, isLandscape });
   }
 
   // ===== フェーズ3：PDFを生成 =====
   // 最初のページ高さでPDFを初期化（幅は210mm固定）
-  const pdf = new jsPDF({ unit: 'mm', format: [PDF_W, pageData[0].pageH_mm] });
+  const pdf = new jsPDF({ unit: 'mm', format: [PDF_W, pageData[0].pageH_mm], orientation: pageData[0].pageOrient });
 
   for (let pi = 0; pi < pageData.length; pi++) {
-    const { p, imgW_mm, imgH_mm, annCanvas, annH_mm, annColMM, contentH_mm, topH_mm, pageH_mm, isLandscape } = pageData[pi];
+    const { p, imgW_mm, imgH_mm, annCanvas, annH_mm, annColMM, contentH_mm, topH_mm, pageH_mm, pageOrient, isLandscape } = pageData[pi];
 
-    // 2ページ目以降はそれぞれの高さでページ追加
-    if (pi > 0) pdf.addPage([PDF_W, pageH_mm]);
+    // 2ページ目以降はそれぞれの高さでページ追加（orientationも指定してdimension swapを防ぐ）
+    if (pi > 0) pdf.addPage([PDF_W, pageH_mm], pageOrient);
 
     // ─── ヘッダー（1枚目のみ）───
     let yContent = MY;
