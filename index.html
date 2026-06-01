@@ -1433,10 +1433,12 @@ async function exportPDF() {
   for (let pi = 0; pi < withImg.length; pi++) {
     const p = withImg[pi];
 
-    // 画像は縦幅制限なし：左カラム幅いっぱいに展開
-    const imgAspect = p.canvasH / p.canvasW;
-    const imgW_mm   = IMG_COL_MM;
-    const imgH_mm   = imgAspect * IMG_COL_MM; // 縦長でもそのまま
+    // 横長判定（アスペクト比 < 1 = 横幅 > 縦幅）
+    const imgAspect   = p.canvasH / p.canvasW;
+    const isLandscape = imgAspect < 1.0;
+    // 横長は全幅(CW)、縦長は左62%カラム
+    const imgW_mm = isLandscape ? CW : IMG_COL_MM;
+    const imgH_mm = imgAspect * imgW_mm;
 
     // 指示リストをレンダリング（高さ取得のため）
     const pageLabel = withImg.length > 1
@@ -1487,7 +1489,9 @@ async function exportPDF() {
         }).join('')
       : `<div style="font-size:9.5px;color:#bbb;">修正指示はありません</div>`;
 
-    const annNode = mkNode(ANN_RENDER_W);
+    // 横長は幅広でレンダリング（画像下に全幅配置するため）
+    const annNodeW = isLandscape ? 620 : ANN_RENDER_W;
+    const annNode = mkNode(annNodeW);
     annNode.innerHTML = `
       ${pageLabel}
       <p style="font-size:7.5px;font-weight:700;letter-spacing:0.1em;color:#aaa;
@@ -1495,24 +1499,28 @@ async function exportPDF() {
           変更リスト</p>
       ${annRowsWithImgs}`;
     const annCanvas = await renderNode(annNode);
-    const annH_mm = annCanvas.height / annCanvas.width * ANN_COL_MM;
+    const annColMM = isLandscape ? CW : ANN_COL_MM;
+    const annH_mm  = annCanvas.height / annCanvas.width * annColMM;
 
-    // コンテンツ高さ＝画像高さと指示リスト高さの大きい方
-    const contentH_mm = Math.max(imgH_mm, annH_mm);
+    // コンテンツ高さ計算
+    const GAP_LAND = 5; // 横長：画像と指示リストの間のギャップ(mm)
+    const contentH_mm = isLandscape
+      ? imgH_mm + GAP_LAND + annH_mm  // 縦積み
+      : Math.max(imgH_mm, annH_mm);   // 横並び（大きい方）
     // ヘッダーは1枚目のみ
     const topH_mm = pi === 0 ? hdrH_MM + 4 : 0;
-    // ページ高さ＝上マージン＋ヘッダー＋コンテンツ＋下マージン
-    const pageH_mm = MY + topH_mm + contentH_mm + MY;
+    // ページ高さ（最小値をPDF_Wに設定してjsPDFのdimension swapを防ぐ）
+    const pageH_mm = Math.max(PDF_W, MY + topH_mm + contentH_mm + MY);
 
-    pageData.push({ p, imgW_mm, imgH_mm, annCanvas, annH_mm, contentH_mm, topH_mm, pageH_mm });
+    pageData.push({ p, imgW_mm, imgH_mm, annCanvas, annH_mm, annColMM, contentH_mm, topH_mm, pageH_mm, isLandscape });
   }
 
   // ===== フェーズ3：PDFを生成 =====
   // 最初のページ高さでPDFを初期化（幅は210mm固定）
-  const pdf = new jsPDF({ unit: 'mm', format: [PDF_W, pageData[0].pageH_mm], orientation: 'portrait' });
+  const pdf = new jsPDF({ unit: 'mm', format: [PDF_W, pageData[0].pageH_mm] });
 
   for (let pi = 0; pi < pageData.length; pi++) {
-    const { p, imgW_mm, imgH_mm, annCanvas, annH_mm, contentH_mm, topH_mm, pageH_mm } = pageData[pi];
+    const { p, imgW_mm, imgH_mm, annCanvas, annH_mm, annColMM, contentH_mm, topH_mm, pageH_mm, isLandscape } = pageData[pi];
 
     // 2ページ目以降はそれぞれの高さでページ追加
     if (pi > 0) pdf.addPage([PDF_W, pageH_mm]);
@@ -1524,22 +1532,23 @@ async function exportPDF() {
       yContent = MY + hdrH_MM + 4;
     }
 
-    // ─── 左カラム：アノテーション済み画像（赤マーク1.28倍サイズ）───
+    // ─── 画像（赤マーク1.28倍サイズ）───
     const imgData = pageToDataURL(p, 1.28);
     pdf.addImage(imgData, 'PNG', MX, yContent, imgW_mm, imgH_mm);
 
-    // ─── 縦区切り線 ───
-    pdf.setDrawColor(220, 220, 220);
-    pdf.setLineWidth(0.25);
-    const sepX = MX + IMG_COL_MM + COL_GAP_MM / 2;
-    pdf.line(sepX, yContent, sepX, yContent + contentH_mm);
-
-    // ─── 右カラム：指示リスト ───
-    const annX_mm = MX + IMG_COL_MM + COL_GAP_MM;
-    pdf.addImage(
-      annCanvas.toDataURL('image/jpeg', 0.95), 'JPEG',
-      annX_mm, yContent, ANN_COL_MM, annH_mm
-    );
+    if (isLandscape) {
+      // ─── 横長：指示リストを画像の下に配置 ───
+      const annY_mm = yContent + imgH_mm + 5;
+      pdf.addImage(annCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', MX, annY_mm, CW, annH_mm);
+    } else {
+      // ─── 縦長：縦区切り線 + 右カラムに指示リスト ───
+      pdf.setDrawColor(220, 220, 220);
+      pdf.setLineWidth(0.25);
+      const sepX = MX + IMG_COL_MM + COL_GAP_MM / 2;
+      pdf.line(sepX, yContent, sepX, yContent + contentH_mm);
+      const annX_mm = MX + IMG_COL_MM + COL_GAP_MM;
+      pdf.addImage(annCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', annX_mm, yContent, ANN_COL_MM, annH_mm);
+    }
   }
 
   overlay.classList.remove('show');
