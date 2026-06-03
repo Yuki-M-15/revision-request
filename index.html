@@ -624,7 +624,7 @@ function loadImageFile(file) {
     const p = pg();
     p.imgEl = img;
     const maxW = panel.clientWidth - 48;
-    const scale = Math.min(maxW / img.naturalWidth, 2);
+    const scale = Math.min(maxW / img.naturalWidth, 1);
     p.canvasW = Math.round(img.naturalWidth  * scale);
     p.canvasH = Math.round(img.naturalHeight * scale);
     canvas.width  = p.canvasW * dpr;
