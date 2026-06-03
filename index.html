@@ -623,7 +623,8 @@ function loadImageFile(file) {
   img.onload = () => {
     const p = pg();
     p.imgEl = img;
-    const maxW = Math.floor(panel.clientWidth * 0.60);
+    const isLandscape = img.naturalWidth > img.naturalHeight;
+    const maxW = Math.floor(panel.clientWidth * (isLandscape ? 0.80 : 0.55));
     const scale = Math.min(maxW / img.naturalWidth, 1);
     p.canvasW = Math.round(img.naturalWidth  * scale);
     p.canvasH = Math.round(img.naturalHeight * scale);
@@ -640,7 +641,7 @@ function loadImageFile(file) {
     const fc = document.createElement('canvas');
     fc.width = p.canvasW; fc.height = p.canvasH;
     fc.getContext('2d').drawImage(img, 0, 0, p.canvasW, p.canvasH);
-    p.imgDataURL = fc.toDataURL('image/jpeg', 0.85);
+    p.imgDataURL = fc.toDataURL('image/jpeg', 0.92);
     dropZone.style.display = 'none';
     container.style.display = 'block';
     panel.scrollTop = 0;
@@ -679,32 +680,32 @@ function render() {
 // ===== DRAW HELPERS (ctx as param — used for both canvas and PDF offscreen) =====
 // scale=1 は画面表示用、PDF出力時は scale=2 を渡して赤マークを大きく描く
 function drawPin(c, x, y, num, scale = 1) {
-  const r = 14 * scale;
+  const r = 10 * scale;
   c.save();
-  c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 8 * scale; c.shadowOffsetY = 2 * scale;
+  c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 6 * scale; c.shadowOffsetY = 2 * scale;
   c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2);
   c.fillStyle = '#e03030'; c.fill();
-  c.strokeStyle = '#fff'; c.lineWidth = 2.5 * scale; c.stroke();
+  c.strokeStyle = '#fff'; c.lineWidth = 2 * scale; c.stroke();
   c.restore();
   c.fillStyle = '#fff';
-  c.font = `bold ${(num > 9 ? 9 : 11) * scale}px -apple-system,sans-serif`;
+  c.font = `bold ${(num > 9 ? 7 : 9) * scale}px -apple-system,sans-serif`;
   c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillText(num, x, y + 0.5 * scale);
 }
 
 function drawBox(c, x, y, w, h, num, scale = 1) {
   c.save();
-  c.strokeStyle = '#e03030'; c.lineWidth = 2.5 * scale; c.setLineDash([]);
+  c.strokeStyle = '#e03030'; c.lineWidth = 2 * scale; c.setLineDash([]);
   c.strokeRect(x, y, w, h);
   c.fillStyle = 'rgba(224,48,48,0.07)'; c.fillRect(x, y, w, h);
-  const r = 13 * scale, bx = x + r + 2 * scale, by = y + r + 2 * scale;
-  c.shadowColor = 'rgba(0,0,0,0.4)'; c.shadowBlur = 6 * scale; c.shadowOffsetY = 2 * scale;
+  const r = 10 * scale, bx = x + r + 2 * scale, by = y + r + 2 * scale;
+  c.shadowColor = 'rgba(0,0,0,0.4)'; c.shadowBlur = 5 * scale; c.shadowOffsetY = 2 * scale;
   c.beginPath(); c.arc(bx, by, r, 0, Math.PI * 2);
   c.fillStyle = '#e03030'; c.fill();
-  c.strokeStyle = '#fff'; c.lineWidth = 2 * scale; c.stroke();
+  c.strokeStyle = '#fff'; c.lineWidth = 1.5 * scale; c.stroke();
   c.restore();
   c.fillStyle = '#fff';
-  c.font = `bold ${(num > 9 ? 9 : 11) * scale}px -apple-system,sans-serif`;
+  c.font = `bold ${(num > 9 ? 7 : 9) * scale}px -apple-system,sans-serif`;
   c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillText(num, bx, by + 0.5 * scale);
 }
@@ -1051,7 +1052,7 @@ function exportHTML() {
     ? new Date(deadline).toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' }) : '';
 
   // 各ページのアノテーション済み画像をJPEG圧縮でdata URL化（PNGより50〜70%軽量）
-  const pageImages = withImg.map(p => pageToDataURL(p, 1.28, 'image/jpeg', 0.70));
+  const pageImages = withImg.map(p => pageToDataURL(p, 1.28, 'image/jpeg', 0.90));
 
   // ページナビHTMLを生成（2ページ以上の場合のみ）
   const navHtml = withImg.length > 1
@@ -1613,7 +1614,8 @@ function debouncedSave() {
 // 復元後に現在のパネル幅に合わせて canvasW/canvasH とアノテーション座標を再スケール
 function rescalePageToCurrentWidth(p) {
   if (!p.imgEl || !p.canvasW) return;
-  const maxW = Math.floor(panel.clientWidth * 0.60);
+  const isLandscape = p.imgEl.naturalWidth > p.imgEl.naturalHeight;
+  const maxW = Math.floor(panel.clientWidth * (isLandscape ? 0.80 : 0.55));
   const scale = Math.min(maxW / p.imgEl.naturalWidth, 1);
   const newW = Math.round(p.imgEl.naturalWidth * scale);
   const newH = Math.round(p.imgEl.naturalHeight * scale);
