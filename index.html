@@ -624,7 +624,7 @@ function loadImageFile(file) {
     const p = pg();
     p.imgEl = img;
     const isLandscape = img.naturalWidth > img.naturalHeight;
-    const maxW = Math.floor(panel.clientWidth * (isLandscape ? 0.80 : 0.55));
+    const maxW = Math.floor(panel.clientWidth * (isLandscape ? 0.85 : 0.55));
     const scale = Math.min(maxW / img.naturalWidth, 1);
     p.canvasW = Math.round(img.naturalWidth  * scale);
     p.canvasH = Math.round(img.naturalHeight * scale);
@@ -637,10 +637,12 @@ function loadImageFile(file) {
     tc.width = 48; tc.height = Math.round(48 * p.canvasH / p.canvasW);
     tc.getContext('2d').drawImage(img, 0, 0, tc.width, tc.height);
     p.thumbnail = tc.toDataURL('image/jpeg', 0.7);
-    // Store image at display resolution for localStorage (JPEG 0.85)
+    // Store at 2× display resolution (capped at original) for Retina quality on reload
+    const storeW = Math.min(p.canvasW * 2, img.naturalWidth);
+    const storeH = Math.round(storeW * img.naturalHeight / img.naturalWidth);
     const fc = document.createElement('canvas');
-    fc.width = p.canvasW; fc.height = p.canvasH;
-    fc.getContext('2d').drawImage(img, 0, 0, p.canvasW, p.canvasH);
+    fc.width = storeW; fc.height = storeH;
+    fc.getContext('2d').drawImage(img, 0, 0, storeW, storeH);
     p.imgDataURL = fc.toDataURL('image/jpeg', 0.92);
     dropZone.style.display = 'none';
     container.style.display = 'block';
@@ -1613,9 +1615,9 @@ function debouncedSave() {
 
 // 復元後に現在のパネル幅に合わせて canvasW/canvasH とアノテーション座標を再スケール
 function rescalePageToCurrentWidth(p) {
-  if (!p.imgEl || !p.canvasW) return;
+  if (!p.imgEl || !p.canvasW || !panel.clientWidth) return;
   const isLandscape = p.imgEl.naturalWidth > p.imgEl.naturalHeight;
-  const maxW = Math.floor(panel.clientWidth * (isLandscape ? 0.80 : 0.55));
+  const maxW = Math.floor(panel.clientWidth * (isLandscape ? 0.85 : 0.55));
   const scale = Math.min(maxW / p.imgEl.naturalWidth, 1);
   const newW = Math.round(p.imgEl.naturalWidth * scale);
   const newH = Math.round(p.imgEl.naturalHeight * scale);
