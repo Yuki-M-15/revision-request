@@ -1056,7 +1056,7 @@ function exportHTML() {
     ? new Date(deadline).toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' }) : '';
 
   // 各ページのアノテーション済み画像をJPEG圧縮でdata URL化（PNGより50〜70%軽量）
-  const pageImages = withImg.map(p => pageToDataURL(p, 1.28, 'image/jpeg', 0.90));
+  const pageImages = withImg.map(p => pageToDataURL(p, 1.18, 'image/jpeg', 0.90));
 
   // ページナビHTMLを生成（2ページ以上の場合のみ）
   const navHtml = withImg.length > 1
@@ -1549,7 +1549,7 @@ async function exportPDF() {
     }
 
     // ─── 画像（赤マーク1.28倍サイズ）───
-    const imgData = pageToDataURL(p, 1.28);
+    const imgData = pageToDataURL(p, 1.18);
     pdf.addImage(imgData, 'PNG', MX, yContent, imgW_mm, imgH_mm);
 
     if (isLandscape) {
