@@ -1401,6 +1401,7 @@ async function exportPDF() {
       `width:${w}px`, 'background:#fff',
       "font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN',Meiryo,sans-serif",
       'color:#1a1a1a', 'line-height:1.6', 'box-sizing:border-box', 'padding:0',
+      'font-feature-settings:"palt" 0',
     ].join(';');
     document.body.appendChild(d);
     return d;
