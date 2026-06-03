@@ -145,7 +145,7 @@
     /* ===== CANVAS PANEL ===== */
     .canvas-panel {
       flex: 1; display: flex; flex-direction: column;
-      align-items: center; overflow: auto; padding: 24px;
+      align-items: center; overflow: auto; padding: 48px;
       background: #141414; position: relative;
     }
     .drop-zone {
@@ -623,7 +623,7 @@ function loadImageFile(file) {
   img.onload = () => {
     const p = pg();
     p.imgEl = img;
-    const maxW = panel.clientWidth - 48;
+    const maxW = panel.clientWidth - 96;
     const scale = Math.min(maxW / img.naturalWidth, 1);
     p.canvasW = Math.round(img.naturalWidth  * scale);
     p.canvasH = Math.round(img.naturalHeight * scale);
