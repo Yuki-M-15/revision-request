@@ -63,6 +63,13 @@
       transition: background 0.12s; white-space: nowrap;
     }
     .btn-pdf:hover { background: #d45530; }
+    /* 初期化など破壊的操作のボタン（控えめな赤） */
+    .btn-danger { color: #c98; border-color: rgba(192,80,80,0.4); }
+    .btn-danger:hover { color: #ec9b86; border-color: #c05050; background: rgba(192,80,80,0.12); }
+    /* レスポンシブ：ボタンが収まらなくなったら JS が .compact を付与。
+       PDF出力・ピン／エリアのラベルは常に維持し、それ以外（btn-ghost）のラベルだけ畳む */
+    .topbar.compact .btn-ghost .btn-label { display: none; }
+    .topbar.compact .btn-ghost { padding: 6px 8px; }
 
     /* ===== META BAR ===== */
     .metabar {
@@ -122,9 +129,9 @@
     .page-tab.active .tab-label { color: #1a1a1a; }
     .tab-ann-count {
       font-size: 0.6rem; font-weight: 700; color: #fff;
-      background: #e03030; border-radius: 8px; padding: 1px 5px; line-height: 1.4;
+      background: #e8613a; border-radius: 8px; padding: 1px 5px; line-height: 1.4;
     }
-    .page-tab.active .tab-ann-count { background: #e03030; color: #fff; }
+    .page-tab.active .tab-ann-count { background: #e8613a; color: #fff; }
     .tab-close {
       background: none; border: none; color: #888; font-size: 0.7rem;
       cursor: pointer; padding: 0 2px; line-height: 1; border-radius: 2px;
@@ -178,7 +185,7 @@
     }
     .sidebar-title { font-size: 0.67rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #999; }
     .ann-count-badge {
-      background: #e03030; color: #fff; border-radius: 10px;
+      background: #e8613a; color: #fff; border-radius: 10px;
       padding: 1px 7px; font-size: 0.64rem; font-weight: 700;
     }
     .ann-count-badge.zero { background: #ddd; color: #aaa; }
@@ -199,7 +206,7 @@
     }
     .ann-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .ann-num {
-      width: 20px; height: 20px; background: #e03030; color: #fff; border-radius: 50%;
+      width: 20px; height: 20px; background: #e8613a; color: #fff; border-radius: 50%;
       font-size: 0.66rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .ann-type-label { font-size: 0.67rem; color: #bbb; flex: 1; }
@@ -341,17 +348,6 @@
       font-size: 0.72rem; color: #999; white-space: nowrap;
       transition: color 0.3s;
     }
-    #btn-clear-storage {
-      display: flex;
-      align-items: center; gap: 4px;
-      font-size: 0.72rem; font-family: inherit; font-weight: 500;
-      color: #c05050; background: none;
-      border: 1px solid rgba(192,80,80,0.35); border-radius: 5px;
-      cursor: pointer; padding: 4px 9px;
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
-      white-space: nowrap;
-    }
-    #btn-clear-storage:hover { background: rgba(192,80,80,0.1); border-color: #c05050; }
   </style>
 </head>
 <body>
@@ -393,54 +389,49 @@
   <span class="topbar-logo"><span class="logo-dot"></span>修正依頼ツール</span>
 
   <div class="tool-group">
-    <button class="tool-btn active" id="btn-pin" onclick="setTool('pin')">
+    <button class="tool-btn active" id="btn-pin" onclick="setTool('pin')" title="ピン">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>
-      ピン
+      <span class="btn-label">ピン</span>
     </button>
-    <button class="tool-btn" id="btn-box" onclick="setTool('box')">
+    <button class="tool-btn" id="btn-box" onclick="setTool('box')" title="エリア">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="1"/></svg>
-      エリア
+      <span class="btn-label">エリア</span>
     </button>
   </div>
 
   <div class="sep"></div>
 
-  <button class="btn-ghost" onclick="undoLast()">
+  <button class="btn-ghost" onclick="undoLast()" title="元に戻す（⌘Z）">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 10h11a5 5 0 0 1 0 10H9"/><polyline points="3 10 7 6 3 2 3 10"/></svg>
-    元に戻す
+    <span class="btn-label">元に戻す</span>
   </button>
-  <button class="btn-ghost" onclick="redoLast()">
+  <button class="btn-ghost" onclick="redoLast()" title="やり直し（⌘⇧Z）">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10H10a5 5 0 0 0 0 10h5"/><polyline points="21 10 17 6 21 2 21 10"/></svg>
-    やり直し
+    <span class="btn-label">やり直し</span>
   </button>
-  <button class="btn-ghost" onclick="clearPage()">
+  <button class="btn-ghost" onclick="clearPage()" title="全消去">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-    全消去
+    <span class="btn-label">全消去</span>
   </button>
-
-  <div class="sep"></div>
 
   <button class="btn-ghost" onclick="openDraftPanel()" title="ドラフトを保存・読み込み">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-    ドラフト
-  </button>
-  <button id="btn-clear-storage" onclick="clearStorage()" title="保存データをすべて消去して最初からやり直す">
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-    初期化
+    <span class="btn-label">ドラフト</span>
   </button>
 
   <div class="topbar-spacer"></div>
 
   <span id="save-status"></span>
 
-  <button class="btn-ghost" onclick="exportPDF()">
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-    PDF出力
+  <button class="btn-ghost btn-danger" onclick="clearStorage()" title="保存データをすべて消去して最初からやり直す">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    <span class="btn-label">初期化</span>
   </button>
 
-  <button class="btn-pdf" onclick="exportHTML()">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-    HTML書き出し
+  <!-- 主アクション：PDF出力（常にラベル維持）-->
+  <button class="btn-pdf" onclick="exportPDF()">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    PDF出力
   </button>
 </div>
 
@@ -617,14 +608,32 @@ document.addEventListener('paste', e => {
   }
 });
 
+// 編集ビューの表示幅: 基本は編集エリアの幅にフィット（上限付き）。
+// ただし極端に縦長の画像は高さ上限でスケールダウンし、巨大化とスクロール過多を防ぐ。
+// PDFの段組比率(62/38)とは完全に独立。あくまで画面上の見やすさ専用。
+const EDIT_PAD = 48;        // .canvas-panel の padding と一致
+const EDIT_MAX_W = 1200;    // ワイドモニタでの表示幅上限(px)
+const EDIT_MAX_H_VH = 2.8;  // 表示高さの上限（ビューポート高さの何倍まで許すか）
+const EDIT_MIN_W = 380;     // 縮小しすぎ防止の下限(px)
+function fitDisplayWidth(natW, natH) {
+  const availW = (panel.clientWidth || 900) - EDIT_PAD * 2;
+  let w = Math.min(availW, EDIT_MAX_W);
+  // 超縦長の画像: その幅で表示すると高さが上限を超える場合、高さ基準で幅を抑える
+  if (natW && natH) {
+    const maxH = (window.innerHeight || 800) * EDIT_MAX_H_VH;
+    const hAtW = w * (natH / natW);
+    if (hAtW > maxH) w = Math.max(EDIT_MIN_W, maxH * (natW / natH));
+  }
+  return Math.max(EDIT_MIN_W, w);
+}
+
 function loadImageFile(file) {
   const url = URL.createObjectURL(file);
   const img = new Image();
   img.onload = () => {
     const p = pg();
     p.imgEl = img;
-    const isLandscape = img.naturalWidth > img.naturalHeight;
-    const maxW = Math.floor(panel.clientWidth * (isLandscape ? 0.85 : 0.55));
+    const maxW = fitDisplayWidth(img.naturalWidth, img.naturalHeight);
     const scale = Math.min(maxW / img.naturalWidth, 1);
     p.canvasW = Math.round(img.naturalWidth  * scale);
     p.canvasH = Math.round(img.naturalHeight * scale);
@@ -671,9 +680,9 @@ function render() {
     const x = Math.min(dragState.sx, dragState.cx), y = Math.min(dragState.sy, dragState.cy);
     const w = Math.abs(dragState.cx - dragState.sx), h = Math.abs(dragState.cy - dragState.sy);
     ctx.save();
-    ctx.strokeStyle = 'rgba(224,48,48,0.75)'; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
+    ctx.strokeStyle = 'rgba(232,97,58,0.75)'; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
     ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = 'rgba(224,48,48,0.06)'; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = 'rgba(232,97,58,0.06)'; ctx.fillRect(x, y, w, h);
     ctx.restore();
   }
   ctx.restore();
@@ -686,7 +695,7 @@ function drawPin(c, x, y, num, scale = 1) {
   c.save();
   c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 6 * scale; c.shadowOffsetY = 2 * scale;
   c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2);
-  c.fillStyle = '#e03030'; c.fill();
+  c.fillStyle = '#e8613a'; c.fill();
   c.strokeStyle = '#fff'; c.lineWidth = 2 * scale; c.stroke();
   c.restore();
   c.fillStyle = '#fff';
@@ -697,13 +706,13 @@ function drawPin(c, x, y, num, scale = 1) {
 
 function drawBox(c, x, y, w, h, num, scale = 1) {
   c.save();
-  c.strokeStyle = '#e03030'; c.lineWidth = 2 * scale; c.setLineDash([]);
+  c.strokeStyle = '#e8613a'; c.lineWidth = 2 * scale; c.setLineDash([]);
   c.strokeRect(x, y, w, h);
-  c.fillStyle = 'rgba(224,48,48,0.07)'; c.fillRect(x, y, w, h);
+  c.fillStyle = 'rgba(232,97,58,0.07)'; c.fillRect(x, y, w, h);
   const r = 10 * scale, bx = x + r + 2 * scale, by = y + r + 2 * scale;
   c.shadowColor = 'rgba(0,0,0,0.4)'; c.shadowBlur = 5 * scale; c.shadowOffsetY = 2 * scale;
   c.beginPath(); c.arc(bx, by, r, 0, Math.PI * 2);
-  c.fillStyle = '#e03030'; c.fill();
+  c.fillStyle = '#e8613a'; c.fill();
   c.strokeStyle = '#fff'; c.lineWidth = 1.5 * scale; c.stroke();
   c.restore();
   c.fillStyle = '#fff';
@@ -1031,6 +1040,167 @@ function loadScript(src) {
   });
 }
 
+// ===== 日本語フォント (PDF実テキスト用) =====
+// 書き出し時にCDNから取得しjsPDFへ埋め込む。jsPDFが使用文字だけサブセット化するため
+// 元フォントが約5MBでも生成PDFは軽量に保たれる。本体HTMLは肥大化しない。
+const JP_FONT_URL = 'https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-sans-jp/400Regular/NotoSansJP_400Regular.ttf';
+let _jpFontB64 = null;
+async function ensureJPFont() {
+  if (_jpFontB64) return _jpFontB64;
+  const txt = document.querySelector('#loading-overlay .loading-text');
+  const prev = txt ? txt.textContent : '';
+  if (txt) txt.textContent = '日本語フォントを取得中…（初回のみ）';
+  const res = await fetch(JP_FONT_URL);
+  if (!res.ok) throw new Error('font fetch failed: ' + res.status);
+  const buf = await res.arrayBuffer();
+  let bin = ''; const bytes = new Uint8Array(buf); const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  _jpFontB64 = btoa(bin);
+  if (txt) txt.textContent = prev;
+  return _jpFontB64;
+}
+function embedJPFont(doc) {
+  doc.addFileToVFS('NotoSansJP.ttf', _jpFontB64);
+  doc.addFont('NotoSansJP.ttf', 'NotoSansJP', 'normal');
+}
+
+// ===== 指示リストの実テキスト描画（mm・選択/コピー可能） =====
+const _ptToMm = pt => pt / 72 * 25.4;
+// 折り返し: 英数字・記号のまとまりは途中で切らず、日本語は1文字単位で折り返す
+function wrapJP(doc, text, maxW) {
+  const NB = /[0-9A-Za-z#\.\-_/%@&\+:]/;
+  const units = []; let buf = '';
+  for (const ch of text) { if (NB.test(ch)) { buf += ch; } else { if (buf) { units.push(buf); buf = ''; } units.push(ch); } }
+  if (buf) units.push(buf);
+  const lines = []; let line = '';
+  for (const u of units) {
+    const test = line + u;
+    if (doc.getTextWidth(test) > maxW && line !== '') { lines.push(line); line = (u === ' ' ? '' : u); }
+    else line = test;
+  }
+  if (line !== '') lines.push(line);
+  return lines.length ? lines : [''];
+}
+const ANN_FS = { body: 8, type: 6, head: 6.5, page: 6, num: 6 }; // pt
+const ANN_LH = 1.55;
+const ANN_BADGE_R = 1.9, ANN_BADGE_GAP = 2.0;                     // mm
+const ANN_INDENT = ANN_BADGE_R * 2 + ANN_BADGE_GAP;
+const ANN_ITEM_GAP = 2.6, ANN_SEP_GAP = 2.2;
+const ANN_LAND_BLOCK_MM = 110; // 横長時の指示ブロック最大幅(mm)。行長を読みやすく抑える
+const _annLineMM = () => _ptToMm(ANN_FS.body) * ANN_LH;
+const _annTypeMM = () => _ptToMm(ANN_FS.type) * 1.4;
+const _annHeadMM = () => _ptToMm(ANN_FS.head) * 1.4;
+const _annPageMM = () => _ptToMm(ANN_FS.page) * 1.4;
+function _annImgMaxW(colW, isLand) { return isLand ? colW * 0.5 : colW; }
+
+// 添付画像の自然サイズを先読み（高さ計算と配置に使用）
+function loadImgDims(srcs) {
+  return Promise.all(srcs.map(src => new Promise(resolve => {
+    const im = new Image();
+    im.onload = () => resolve([src, { w: im.naturalWidth || 1, h: im.naturalHeight || 1 }]);
+    im.onerror = () => resolve([src, { w: 1, h: 1 }]);
+    im.src = src;
+  }))).then(arr => Object.fromEntries(arr));
+}
+
+// 1ブロック（指示1件）の高さ(mm)。measure と draw で共有し計算ズレを防ぐ
+function _annBlockH(doc, ann, bw, imgDims) {
+  let h = _annTypeMM();
+  doc.setFontSize(ANN_FS.body);
+  const lines = wrapJP(doc, ann.text || '（指示未記入）', bw - ANN_INDENT);
+  h += lines.length * _annLineMM();
+  for (const src of (ann.images || [])) {
+    const d = imgDims[src] || { w: 1, h: 1 };
+    h += (bw - ANN_INDENT) * (d.h / d.w) + 1.5;
+  }
+  return h + ANN_ITEM_GAP + ANN_SEP_GAP;
+}
+
+// 指示リストのレイアウト計算（measure・draw 共通）。
+// alignment 案ア(2026-06-04): imgH/canvasH が渡され縦長2カラム時は、各ブロックを対応マーカーの
+// Y位置に揃える。重なりは下方向に押し出して回避。横長(isLand)・引数欠如時は従来の上詰め。
+// 戻り値: { bw, headerH, items:[{ann, y, h}], bottom }（y は絶対mm、bottom は最下端mm）
+function _annLayout(doc, anns, x, y, colW, isLand, multi, imgDims, imgH, canvasH) {
+  doc.setFont('NotoSansJP');
+  const bw = isLand ? Math.min(colW, ANN_LAND_BLOCK_MM) : colW; // 行長を抑えるブロック幅
+  const headerH = _annHeadMM() + 2.0; // PAGE表記はランニングヘッダーへ移管（多重表示回避）
+  const headerBottom = y + headerH;
+  const items = anns.map(ann => ({ ann, h: _annBlockH(doc, ann, bw, imgDims) }));
+  const canAlign = !isLand && imgH && canvasH; // 縦長2カラムかつ画像情報ありのときY連動
+  if (canAlign) {
+    // 各ブロックの目標Y = 画像上端 + マーカーのY割合 × 画像高さ（ピン/エリアとも ann.y を使用）
+    items.forEach(it => {
+      const frac = Math.max(0, Math.min(1, (it.ann.y || 0) / canvasH));
+      it.target = y + frac * imgH;
+    });
+    // 空間順（上→下）に並べ替えてから重なりを下方向に解消
+    items.sort((a, b) => a.target - b.target);
+    let prevBottom = headerBottom;
+    items.forEach(it => { it.y = Math.max(it.target, prevBottom); prevBottom = it.y + it.h; });
+  } else {
+    let cy = headerBottom;
+    items.forEach(it => { it.y = cy; cy += it.h; });
+  }
+  const bottom = items.length
+    ? Math.max(...items.map(it => it.y + it.h))
+    : headerBottom + _annLineMM();
+  return { bw, headerH, items, bottom };
+}
+
+// 高さ計測（_annLayout と同じ計算でページ高さを事前算出）
+function measureAnn(doc, anns, colW, isLand, multi, imgDims, imgH, canvasH) {
+  return _annLayout(doc, anns, 0, 0, colW, isLand, multi, imgDims, imgH, canvasH).bottom;
+}
+
+// 実描画
+function drawAnn(doc, anns, x, y, colW, isLand, multi, pi, total, imgDims, imgH, canvasH) {
+  const L = _annLayout(doc, anns, x, y, colW, isLand, multi, imgDims, imgH, canvasH);
+  const bw = L.bw;
+  // ─── ヘッダー（変更リスト見出し＋件数。PAGE表記はランニングヘッダーが担当）───
+  const hy = y;
+  doc.setFontSize(ANN_FS.head); doc.setTextColor(150);
+  doc.text('変更リスト', x, hy + _annHeadMM() * 0.7);
+  // 件数サマリー（控えめに見出し行の右端へ）
+  doc.setFontSize(ANN_FS.page); doc.setTextColor(170);
+  doc.text(anns.length + '件', x + colW, hy + _annHeadMM() * 0.7, { align: 'right' });
+  if (!anns.length) {
+    const ey = y + L.headerH;
+    doc.setFontSize(ANN_FS.body); doc.setTextColor(180);
+    doc.text('修正指示はありません', x, ey + _annLineMM() * 0.7);
+    return;
+  }
+  // ─── 各ブロックを算出済みのY位置に描画 ───
+  for (const it of L.items) {
+    const ann = it.ann;
+    let cy = it.y;
+    // 番号バッジ（ブランドオレンジ）
+    doc.setFillColor(232, 97, 58);
+    doc.circle(x + ANN_BADGE_R, cy + ANN_BADGE_R + 0.3, ANN_BADGE_R, 'F');
+    doc.setFontSize(ANN_FS.num); doc.setTextColor(255);
+    doc.text(String(ann.num), x + ANN_BADGE_R, cy + ANN_BADGE_R + 0.3 + _ptToMm(ANN_FS.num) * 0.35, { align: 'center' });
+    // タイプラベル
+    doc.setFontSize(ANN_FS.type); doc.setTextColor(180);
+    doc.text(ann.type === 'pin' ? 'ピン指定' : 'エリア指定', x + ANN_INDENT, cy + _annTypeMM() * 0.65);
+    cy += _annTypeMM();
+    // 本文（実テキスト）
+    doc.setFontSize(ANN_FS.body); doc.setTextColor(26);
+    const lines = wrapJP(doc, ann.text || '（指示未記入）', bw - ANN_INDENT);
+    for (const ln of lines) { doc.text(ln, x + ANN_INDENT, cy + _annLineMM() * 0.72); cy += _annLineMM(); }
+    // 添付画像
+    for (const src of (ann.images || [])) {
+      const d = imgDims[src] || { w: 1, h: 1 };
+      const w = bw - ANN_INDENT;
+      const ih = w * (d.h / d.w);
+      const fmt = /^data:image\/(jpe?g)/i.test(src) ? 'JPEG' : 'PNG';
+      try { doc.addImage(src, fmt, x + ANN_INDENT, cy, w, ih); } catch (e) {}
+      cy += ih + 1.5;
+    }
+    cy += ANN_ITEM_GAP;
+    doc.setDrawColor(240); doc.setLineWidth(0.2);
+    doc.line(x, cy, x + bw, cy);
+  }
+}
+
 // ===== HTML EXPORT =====
 // 全アノテーションデータ・画像・テキストをbase64埋め込みした自己完結型HTMLを生成・ダウンロード
 function exportHTML() {
@@ -1227,7 +1397,7 @@ function exportHTML() {
     }
     .ann-row:last-child { border-bottom: none; margin-bottom: 0; }
     .ann-num {
-      width: 18px; height: 18px; min-width: 18px; background: #e03030;
+      width: 18px; height: 18px; min-width: 18px; background: #e8613a;
       color: #fff; border-radius: 50%; font-size: 8px; font-weight: 700;
       text-align: center; line-height: 18px; flex-shrink: 0;
     }
@@ -1349,7 +1519,7 @@ ${_sc}
   URL.revokeObjectURL(url);
 }
 
-// ===== PDF EXPORT (jsPDF 直接配置 + html2canvas テキスト部のみ) =====
+// ===== PDF EXPORT (jsPDF 直接配置。ヘッダー・指示リストとも実テキスト描画) =====
 // ページ高さを画像の縦幅に合わせて可変にする（A4縦幅に縛らない）。
 // 画面上での確認用途のため印刷は考慮しない。
 async function exportPDF() {
@@ -1374,10 +1544,10 @@ async function exportPDF() {
 
   try {
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    await ensureJPFont();
   } catch(e) {
     overlay.classList.remove('show');
-    alert('ライブラリの読み込みに失敗しました。\nインターネット接続を確認してから再度お試しください。');
+    alert('ライブラリまたはフォントの読み込みに失敗しました。\nインターネット接続を確認してから再度お試しください。');
     return;
   }
 
@@ -1390,58 +1560,60 @@ async function exportPDF() {
   const COL_GAP_MM  = 5;
   const IMG_COL_MM  = CW * 0.62;        // ~114mm（固定）
   const ANN_COL_MM  = CW - IMG_COL_MM - COL_GAP_MM; // ~65mm（固定）
-  const ANN_RENDER_W    = 280;  // px
-  const HEADER_RENDER_W = 760;  // px
+  const RUNHDR_MM       = 9;     // 2ページ目以降の細いランニングヘッダー高さ(mm)
 
-  // 一時DOMノード（html2canvas 用）
-  function mkNode(w) {
-    const d = document.createElement('div');
-    d.style.cssText = [
-      'position:fixed', 'left:-9999px', 'top:0',
-      `width:${w}px`, 'background:#fff',
-      "font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN',Meiryo,sans-serif",
-      'color:#1a1a1a', 'line-height:1.6', 'box-sizing:border-box', 'padding:0',
-      'font-feature-settings:"palt" 0',
-    ].join(';');
-    document.body.appendChild(d);
-    return d;
-  }
-  async function renderNode(node) {
-    // 添付画像がある場合、ロード完了を待ってから scrollHeight を確定する
-    const imgs = Array.from(node.querySelectorAll('img'));
-    if (imgs.length > 0) {
-      await Promise.all(imgs.map(img =>
-        (img.complete && img.naturalHeight > 0)
-          ? Promise.resolve()
-          : new Promise(resolve => { img.onload = img.onerror = resolve; })
-      ));
-    }
-    const c = await html2canvas(node, {
-      scale: 2, useCORS: true, allowTaint: true, logging: false,
-      backgroundColor: '#ffffff',
-      width: parseInt(node.style.width),
-      height: node.scrollHeight,
-    });
-    document.body.removeChild(node);
-    return c;
+  // 2ページ目以降の細いランニングヘッダー（案件名｜ページ名 PAGE x/N ＋ 罫線）。
+  // 流し見でページの切れ目を分かりやすくする。実テキスト描画で軽量。
+  function drawRunHeader(pdf, pi, total, pageLabel) {
+    const ry = MY;
+    pdf.setFont('NotoSansJP');
+    pdf.setFontSize(8); pdf.setTextColor(90);
+    pdf.text(project, MX, ry + 3.2);                 // 左：案件名
+    pdf.setFontSize(7); pdf.setTextColor(150);
+    const right = pageLabel ? (pageLabel + '　PAGE ' + (pi + 1) + ' / ' + total)
+                            : ('PAGE ' + (pi + 1) + ' / ' + total);
+    pdf.text(right, MX + CW, ry + 3.2, { align: 'right' }); // 右：ページ名＋連番
+    pdf.setDrawColor(210); pdf.setLineWidth(0.3);
+    pdf.line(MX, ry + 5.2, MX + CW, ry + 5.2);        // 区切り罫線
   }
 
-  // ===== フェーズ1：ヘッダーをレンダリング =====
-  const hdrNode = mkNode(HEADER_RENDER_W);
-  hdrNode.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;
-        padding-bottom:8px;border-bottom:2.5px solid #1a1a1a;margin-bottom:6px;">
-      <span style="font-size:19px;font-weight:800;letter-spacing:0.02em;">デザイン修正依頼書</span>
-      <div style="font-size:9px;color:#666;text-align:right;line-height:2;">
-        <div>作成日：${today}</div>
-        ${deadlineStr ? `<div>修正納期：${deadlineStr}</div>` : ''}
-      </div>
-    </div>
-    <div style="background:#f5f5f1;padding:5px 10px;font-size:10px;border-radius:4px;">
-      <strong style="color:#555;">案件名</strong>&ensp;${escHtml(project)}
-    </div>`;
-  const hdrCanvas = await renderNode(hdrNode);
-  const hdrH_MM = hdrCanvas.height / hdrCanvas.width * CW; // ヘッダー実高さ (mm)
+  // ===== フェーズ1：依頼書ヘッダー（実テキスト描画。ランニングヘッダーと質感を統一）=====
+  // 旧実装は html2canvas で画像化していたが、ページ2以降の実テキスト版と質感が揃わないため廃止。
+  // タイトルは Noto Sans JP(400) のみ埋め込みのため、微小オフセットの二重描画で擬似ボールド化。
+  const DOCHDR_MM = 18; // 依頼書ヘッダーの占有高さ(mm)。drawDocHeader の実描画と一致させる
+  function drawDocHeader(pdf) {
+    pdf.setFont('NotoSansJP');
+    // タイトル（擬似ボールド＝0.18mmずらして二重描画）
+    pdf.setFontSize(15); pdf.setTextColor(26);
+    pdf.text('デザイン修正依頼書', MX, MY + 6);
+    pdf.text('デザイン修正依頼書', MX + 0.18, MY + 6);
+    // 右：作成日・修正納期
+    pdf.setFontSize(8); pdf.setTextColor(110);
+    pdf.text('作成日：' + today, MX + CW, MY + 3, { align: 'right' });
+    if (deadlineStr) pdf.text('修正納期：' + deadlineStr, MX + CW, MY + 6.8, { align: 'right' });
+    // タイトル下の太罫線
+    const ruleY = MY + 8.5;
+    pdf.setDrawColor(26); pdf.setLineWidth(0.6);
+    pdf.line(MX, ruleY, MX + CW, ruleY);
+    // 案件名バンド
+    const bandY = ruleY + 2, bandH = 7;
+    pdf.setFillColor(245, 245, 241);
+    pdf.roundedRect(MX, bandY, CW, bandH, 1, 1, 'F');
+    const ty = bandY + bandH / 2 + 1.2;
+    pdf.setFontSize(9); pdf.setTextColor(85);
+    pdf.text('案件名', MX + 3, ty);
+    const lblW = pdf.getTextWidth('案件名');
+    pdf.setTextColor(40);
+    pdf.text(project, MX + 3 + lblW + 3, ty);
+  }
+
+  // 添付画像の自然サイズを先読み（指示リストの高さ計算・配置に使用）
+  const allImgSrcs = [];
+  withImg.forEach(p => p.annotations.forEach(a => (a.images || []).forEach(s => allImgSrcs.push(s))));
+  const imgDims = await loadImgDims(allImgSrcs);
+  // 高さ計測専用のドキュメント（フォント埋め込み済み）
+  const measDoc = new jsPDF({ unit: 'mm', format: [PDF_W, 400] });
+  embedJPFont(measDoc);
 
   // ===== フェーズ2：全ページのデータを事前処理（ページ高さ算出のため） =====
   const pageData = [];
@@ -1450,103 +1622,53 @@ async function exportPDF() {
 
     // 横長判定（アスペクト比 < 1 = 横幅 > 縦幅）
     const imgAspect   = p.canvasH / p.canvasW;
-    const isLandscape = imgAspect < 1.0;
-    // 横長は全幅(CW)、縦長は左62%カラム
+    // A案(2026-06-04): 横長でも指示リストを常に右カラムへ統一するため landscape 分岐を無効化。
+    // 全ページ「左62%画像／右38%指示」の2カラム固定（imgAspect は画像高さ算出にのみ使用）。
+    // 旧仕様（横長=全幅展開＋指示を画像下に縦積み）の分岐は残置（isLandscape=false で常に未到達）。
+    const isLandscape = false;
+    // 縦長/横長いずれも左62%カラムに画像を配置
     const imgW_mm = isLandscape ? CW : IMG_COL_MM;
     const imgH_mm = imgAspect * imgW_mm;
 
-    // 指示リストをレンダリング（高さ取得のため）
-    const pageLabel = withImg.length > 1
-      ? `<p style="font-size:8px;font-weight:700;color:#aaa;letter-spacing:0.1em;
-             text-transform:uppercase;margin:0 0 8px;padding-bottom:5px;border-bottom:1px solid #eee;">
-             PAGE ${pi + 1} / ${withImg.length}</p>` : '';
-    const annRows = p.annotations.length
-      ? p.annotations.map(ann => {
-          const txt = (ann.text || '（指示未記入）')
-            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-            .replace(/\n/g,'<br>');
-          return `
-            <div style="display:flex;gap:7px;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid #f0f0ee;">
-              <div style="width:17px;height:17px;min-width:17px;background:#e03030;color:#fff;
-                  border-radius:50%;font-size:7.5px;font-weight:700;text-align:center;line-height:17px;">
-                ${ann.num}</div>
-              <div>
-                <div style="font-size:8px;color:#bbb;margin-bottom:2px;">
-                  ${ann.type === 'pin' ? 'ピン指定' : 'エリア指定'}</div>
-                <div style="font-size:9.5px;line-height:1.65;color:#1a1a1a;">${txt}</div>
-              </div>
-            </div>`;
-        }).join('')
-      : `<div style="font-size:9.5px;color:#bbb;">修正指示はありません</div>`;
-
-    // 添付画像を各アノテーション行に追加（既にレンダリング済みのHTMLに注入）
-    const annRowsWithImgs = p.annotations.length
-      ? p.annotations.map(ann => {
-          const txt = (ann.text || '（指示未記入）')
-            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-            .replace(/\n/g,'<br>');
-          const attachedImgsHtml = (ann.images && ann.images.length)
-            ? `<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px;">
-                ${ann.images.map(src => `<img src="${src}" style="width:100%;max-width:310px;height:auto;border-radius:3px;border:1px solid #e0e0e0;display:block;">`).join('')}
-               </div>` : '';
-          return `
-            <div style="display:flex;gap:7px;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid #f0f0ee;">
-              <div style="width:17px;height:17px;min-width:17px;background:#e03030;color:#fff;
-                  border-radius:50%;font-size:7.5px;font-weight:700;text-align:center;line-height:17px;">
-                ${ann.num}</div>
-              <div style="flex:1;">
-                <div style="font-size:8px;color:#bbb;margin-bottom:2px;">
-                  ${ann.type === 'pin' ? 'ピン指定' : 'エリア指定'}</div>
-                <div style="font-size:9.5px;line-height:1.65;color:#1a1a1a;">${txt}</div>
-                ${attachedImgsHtml}
-              </div>
-            </div>`;
-        }).join('')
-      : `<div style="font-size:9.5px;color:#bbb;">修正指示はありません</div>`;
-
-    // 横長は幅広でレンダリング（画像下に全幅配置するため）
-    const annNodeW = isLandscape ? 620 : ANN_RENDER_W;
-    const annNode = mkNode(annNodeW);
-    annNode.innerHTML = `
-      ${pageLabel}
-      <p style="font-size:7.5px;font-weight:700;letter-spacing:0.1em;color:#aaa;
-          text-transform:uppercase;margin:0 0 8px;padding-bottom:5px;border-bottom:1px solid #eee;">
-          変更リスト</p>
-      ${annRowsWithImgs}`;
-    const annCanvas = await renderNode(annNode);
+    // 指示リスト：実テキスト描画の高さを計測（drawAnn と同一計算）
+    // 案ア: imgH_mm/canvasH を渡し、縦長2カラムは各指示をマーカーのY位置に揃える
     const annColMM = isLandscape ? CW : ANN_COL_MM;
-    const annH_mm  = annCanvas.height / annCanvas.width * annColMM;
+    const annH_mm  = measureAnn(measDoc, p.annotations, annColMM, isLandscape, withImg.length > 1, imgDims, imgH_mm, p.canvasH);
 
     // コンテンツ高さ計算
     const GAP_LAND = 5; // 横長：画像と指示リストの間のギャップ(mm)
     const contentH_mm = isLandscape
       ? imgH_mm + GAP_LAND + annH_mm  // 縦積み
       : Math.max(imgH_mm, annH_mm);   // 横並び（大きい方）
-    // ヘッダーは1枚目のみ
-    const topH_mm = pi === 0 ? hdrH_MM + 4 : 0;
+    // 1枚目は依頼書ヘッダー、2枚目以降は細いランニングヘッダー
+    const topH_mm = pi === 0 ? DOCHDR_MM + 4 : RUNHDR_MM;
     // ページ高さは内容量に応じて可変（制限なし）
     const pageH_mm = MY + topH_mm + contentH_mm + MY;
     // jsPDFのdimension swap防止: pageH_mm < PDF_W のときlandscape指定で縦横スワップを回避
     const pageOrient = pageH_mm < PDF_W ? 'l' : 'p';
 
-    pageData.push({ p, imgW_mm, imgH_mm, annCanvas, annH_mm, annColMM, contentH_mm, topH_mm, pageH_mm, pageOrient, isLandscape });
+    pageData.push({ p, imgW_mm, imgH_mm, annH_mm, annColMM, contentH_mm, topH_mm, pageH_mm, pageOrient, isLandscape });
   }
 
   // ===== フェーズ3：PDFを生成 =====
   // 最初のページ高さでPDFを初期化（幅は210mm固定）
   const pdf = new jsPDF({ unit: 'mm', format: [PDF_W, pageData[0].pageH_mm], orientation: pageData[0].pageOrient });
+  embedJPFont(pdf);
 
   for (let pi = 0; pi < pageData.length; pi++) {
-    const { p, imgW_mm, imgH_mm, annCanvas, annH_mm, annColMM, contentH_mm, topH_mm, pageH_mm, pageOrient, isLandscape } = pageData[pi];
+    const { p, imgW_mm, imgH_mm, annH_mm, annColMM, contentH_mm, topH_mm, pageH_mm, pageOrient, isLandscape } = pageData[pi];
 
     // 2ページ目以降はそれぞれの高さでページ追加（orientationも指定してdimension swapを防ぐ）
     if (pi > 0) pdf.addPage([PDF_W, pageH_mm], pageOrient);
 
-    // ─── ヘッダー（1枚目のみ）───
+    // ─── ヘッダー（1枚目＝依頼書ヘッダー／2枚目以降＝ランニングヘッダー）───
     let yContent = MY;
     if (pi === 0) {
-      pdf.addImage(hdrCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', MX, MY, CW, hdrH_MM);
-      yContent = MY + hdrH_MM + 4;
+      drawDocHeader(pdf);
+      yContent = MY + DOCHDR_MM + 4;
+    } else {
+      drawRunHeader(pdf, pi, pageData.length, p.label || null);
+      yContent = MY + RUNHDR_MM;
     }
 
     // ─── 画像（赤マーク1.28倍サイズ）───
@@ -1554,17 +1676,18 @@ async function exportPDF() {
     pdf.addImage(imgData, 'PNG', MX, yContent, imgW_mm, imgH_mm);
 
     if (isLandscape) {
-      // ─── 横長：指示リストを画像の下に配置 ───
+      // ─── 横長：指示リストを画像の下に実テキストで配置 ───
       const annY_mm = yContent + imgH_mm + 5;
-      pdf.addImage(annCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', MX, annY_mm, CW, annH_mm);
+      drawAnn(pdf, p.annotations, MX, annY_mm, CW, true, withImg.length > 1, pi, withImg.length, imgDims);
     } else {
-      // ─── 縦長：縦区切り線 + 右カラムに指示リスト ───
+      // ─── 縦長：縦区切り線 + 右カラムに実テキストの指示リスト ───
       pdf.setDrawColor(220, 220, 220);
       pdf.setLineWidth(0.25);
       const sepX = MX + IMG_COL_MM + COL_GAP_MM / 2;
       pdf.line(sepX, yContent, sepX, yContent + contentH_mm);
       const annX_mm = MX + IMG_COL_MM + COL_GAP_MM;
-      pdf.addImage(annCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', annX_mm, yContent, ANN_COL_MM, annH_mm);
+      // 案ア: imgH_mm/canvasH を渡してY連動配置（各指示を対応マーカーの高さに揃える）
+      drawAnn(pdf, p.annotations, annX_mm, yContent, ANN_COL_MM, false, withImg.length > 1, pi, withImg.length, imgDims, imgH_mm, p.canvasH);
     }
   }
 
@@ -1619,8 +1742,7 @@ function debouncedSave() {
 // 復元後に現在のパネル幅に合わせて canvasW/canvasH とアノテーション座標を再スケール
 function rescalePageToCurrentWidth(p) {
   if (!p.imgEl || !p.canvasW || !panel.clientWidth) return;
-  const isLandscape = p.imgEl.naturalWidth > p.imgEl.naturalHeight;
-  const maxW = Math.floor(panel.clientWidth * (isLandscape ? 0.85 : 0.55));
+  const maxW = fitDisplayWidth(p.imgEl.naturalWidth, p.imgEl.naturalHeight);
   const scale = Math.min(maxW / p.imgEl.naturalWidth, 1);
   const newW = Math.round(p.imgEl.naturalWidth * scale);
   const newH = Math.round(p.imgEl.naturalHeight * scale);
@@ -1695,6 +1817,32 @@ function clearStorage() {
   location.reload();
 }
 
+// ===== ツールバー：ボタンが収まらない時だけラベルを畳む（.compact）=====
+// 固定ブレークポイントではなく実測＋ヒステリシス。境界での畳む/戻すの往復（チラつき）を防ぐため、
+// 「畳む条件」と「戻す条件」に16pxのあそびを設ける。フル表示時の必要幅は _tbNeeded にキャッシュ。
+let _tbNeeded = 0;          // 直近に実測した「フル表示に必要な幅」(px)
+const TB_HYSTERESIS = 16;   // 畳む幅と戻す幅の差（あそび）。これ未満は状態維持
+function updateToolbarCompact() {
+  const bar = document.querySelector('.topbar');
+  if (!bar) return;
+  if (!bar.classList.contains('compact')) {
+    // 展開中：実コンテンツ幅を記録し、はみ出していれば畳む
+    _tbNeeded = bar.scrollWidth;
+    if (_tbNeeded > bar.clientWidth + 1) bar.classList.add('compact');
+  } else {
+    // 畳み中：明確に余裕（16px）ができた時だけ戻す（往復防止）。畳んだまま測るので再はみ出ししない
+    if (bar.clientWidth >= _tbNeeded + TB_HYSTERESIS) bar.classList.remove('compact');
+  }
+}
+// rAFでリサイズ連打をまとめ、1フレーム1回だけ判定（ブラウザの再レイアウト回数も削減）
+let _tbRAF = null;
+function scheduleToolbarCompact() {
+  if (_tbRAF) return;
+  _tbRAF = requestAnimationFrame(() => { _tbRAF = null; updateToolbarCompact(); });
+}
+window.addEventListener('resize', scheduleToolbarCompact);
+window.addEventListener('load', updateToolbarCompact);
+
 function showSaveStatus(state) {
   const el = document.getElementById('save-status');
   if (!el) return;
@@ -1704,15 +1852,16 @@ function showSaveStatus(state) {
   } else if (state === 'restored') {
     el.textContent = '↩ データを復元しました';
     el.style.color = '#4a90d9';
-    setTimeout(() => { el.textContent = '✓ 自動保存済み'; el.style.color = '#aaa'; }, 4000);
+    setTimeout(() => { el.textContent = '✓ 自動保存済み'; el.style.color = '#aaa'; updateToolbarCompact(); }, 4000);
   } else if (state === 'drafted') {
     el.textContent = '✓ ドラフトに保存しました';
     el.style.color = '#4a90d9';
-    setTimeout(() => { el.textContent = '✓ 自動保存済み'; el.style.color = '#aaa'; }, 3000);
+    setTimeout(() => { el.textContent = '✓ 自動保存済み'; el.style.color = '#aaa'; updateToolbarCompact(); }, 3000);
   } else if (state === 'error') {
     el.textContent = '⚠ 保存失敗（容量不足）';
     el.style.color = '#d04040';
   }
+  updateToolbarCompact(); // save-status のテキスト幅変化に追従
 }
 
 // ===== DRAFT SYSTEM =====
