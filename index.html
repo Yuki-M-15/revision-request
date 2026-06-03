@@ -623,7 +623,7 @@ function loadImageFile(file) {
   img.onload = () => {
     const p = pg();
     p.imgEl = img;
-    const maxW = Math.floor(panel.clientWidth * 0.70);
+    const maxW = Math.floor(panel.clientWidth * 0.60);
     const scale = Math.min(maxW / img.naturalWidth, 1);
     p.canvasW = Math.round(img.naturalWidth  * scale);
     p.canvasH = Math.round(img.naturalHeight * scale);
@@ -1610,6 +1610,25 @@ function debouncedSave() {
   _saveTimer = setTimeout(saveToStorage, 800);
 }
 
+// 復元後に現在のパネル幅に合わせて canvasW/canvasH とアノテーション座標を再スケール
+function rescalePageToCurrentWidth(p) {
+  if (!p.imgEl || !p.canvasW) return;
+  const maxW = Math.floor(panel.clientWidth * 0.60);
+  const scale = Math.min(maxW / p.imgEl.naturalWidth, 1);
+  const newW = Math.round(p.imgEl.naturalWidth * scale);
+  const newH = Math.round(p.imgEl.naturalHeight * scale);
+  if (newW === p.canvasW && newH === p.canvasH) return;
+  const ratio = newW / p.canvasW;
+  p.annotations.forEach(a => {
+    a.x = Math.round(a.x * ratio);
+    a.y = Math.round(a.y * ratio);
+    if (a.w != null) a.w = Math.round(a.w * ratio);
+    if (a.h != null) a.h = Math.round(a.h * ratio);
+  });
+  p.canvasW = newW;
+  p.canvasH = newH;
+}
+
 function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -1648,6 +1667,7 @@ function loadFromStorage() {
       const img = new Image();
       img.onload = () => {
         p.imgEl = img;
+        rescalePageToCurrentWidth(p);
         pending--;
         if (pending === 0) {
           activatePage(curIdx);
@@ -1826,6 +1846,7 @@ function loadDraft(key) {
       const img = new Image();
       img.onload = () => {
         p.imgEl = img;
+        rescalePageToCurrentWidth(p);
         pending--;
         if (pending === 0) { activatePage(curIdx); saveToStorage(); }
       };
