@@ -715,11 +715,13 @@ function drawBox(c, x, y, w, h, num, scale = 1) {
 // Render a page to a data URL（annScale=2 でPDF用に赤マークを大きく描画）
 // format: 'image/png'（PDF用・デフォルト）または 'image/jpeg'（HTML書き出し用）
 // quality: JPEG品質 0〜1（PNGの場合は無視される）
-function pageToDataURL(p, annScale = 1, format = 'image/png', quality = 1) {
+function pageToDataURL(p, annScale = 1, format = 'image/png', quality = 1, exportScale = 1.5) {
   const oc = document.createElement('canvas');
-  oc.width = p.canvasW; oc.height = p.canvasH;
+  oc.width = Math.round(p.canvasW * exportScale);
+  oc.height = Math.round(p.canvasH * exportScale);
   const oc_ctx = oc.getContext('2d');
-  oc_ctx.drawImage(p.imgEl, 0, 0, p.canvasW, p.canvasH);
+  oc_ctx.drawImage(p.imgEl, 0, 0, oc.width, oc.height);
+  oc_ctx.scale(exportScale, exportScale);
   p.annotations.forEach(ann => {
     if (ann.type === 'pin') drawPin(oc_ctx, ann.x, ann.y, ann.num, annScale);
     else                     drawBox(oc_ctx, ann.x, ann.y, ann.w, ann.h, ann.num, annScale);
