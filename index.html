@@ -172,6 +172,7 @@
       box-shadow: 0 8px 40px rgba(0,0,0,0.6); flex-shrink: 0;
     }
     #canvas-container.tool-pin, #canvas-container.tool-box { cursor: crosshair; }
+    #canvas-container.tool-pen { cursor: crosshair; }
     #main-canvas { display: block; }
 
     /* ===== SIDEBAR ===== */
@@ -204,17 +205,25 @@
     .annotation-item.drag-over .btn-attach {
       border-color: #1a1a1a; color: #1a1a1a; background: #eef2ff;
     }
-    .ann-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ann-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; }
+    .annotation-item.sel { border-color: #1c7ed6; box-shadow: 0 0 0 1px #1c7ed6; }
+    .annotation-item.dragging { opacity: 0.4; }
+    .annotation-item.row-over { border-color: #1c7ed6; border-style: dashed; background: #f5f8ff; }
+    .ann-grip { cursor: grab; color: #9a9a96; display: flex; align-items: center; padding: 2px 1px; flex-shrink: 0; user-select: none; border-radius: 3px; }
+    .ann-grip:hover { color: #555; background: #eee; }
+    .ann-grip:active { cursor: grabbing; }
     .ann-num {
       width: 20px; height: 20px; background: #e8613a; color: #fff; border-radius: 50%;
       font-size: 0.66rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.16); /* 白系バッジでも輪郭が見えるように */
     }
     .ann-type-label { font-size: 0.67rem; color: #bbb; flex: 1; }
     .ann-delete {
-      background: none; border: none; color: #ddd; font-size: 0.8rem;
-      cursor: pointer; padding: 2px 4px; border-radius: 3px; line-height: 1; transition: color 0.12s;
+      background: none; border: none; color: #c4c4bc;
+      cursor: pointer; padding: 2px; border-radius: 3px; line-height: 1;
+      display: flex; align-items: center; transition: color 0.12s, background 0.12s;
     }
-    .ann-delete:hover { color: #e03030; }
+    .ann-delete:hover { color: #e03030; background: rgba(224,48,48,0.08); }
     .ann-text {
       width: 100%; border: 1.5px solid #ebebeb; border-radius: 5px; padding: 7px 9px;
       font-size: 0.77rem; font-family: inherit; resize: none; min-height: 62px;
@@ -264,7 +273,7 @@
     /* ===== LOADING OVERLAY ===== */
     #loading-overlay {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-      z-index: 999; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #fff;
+      z-index: 1100; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #fff;
     }
     #loading-overlay.show { display: flex; }
     .loading-spinner {
@@ -348,6 +357,249 @@
       font-size: 0.72rem; color: #999; white-space: nowrap;
       transition: color 0.3s;
     }
+
+    /* ===== SHARE MODAL（URL共有）===== */
+    #share-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    #share-overlay.show { display: flex; }
+    .share-check {
+      display: flex; align-items: center; gap: 8px; margin-top: 12px;
+      font-size: 0.78rem; color: #ccc; cursor: pointer; user-select: none;
+    }
+    .share-pw-area {
+      display: none; gap: 8px; margin-top: 8px; align-items: center;
+    }
+    .share-pw-area #vault-pw-field {
+      flex: 1; font-family: monospace; letter-spacing: 1px;
+    }
+    .share-publish { width: 100%; margin-top: 14px; }
+    .share-result {
+      display: none; margin-top: 14px; padding: 12px;
+      background: #1e1e1e; border: 1px solid #3a3a3a; border-radius: 6px;
+    }
+    .share-result-label { font-size: 0.72rem; color: #999; margin-bottom: 4px; }
+    .share-result-url { color: #6ab0ff; font-size: 0.78rem; word-break: break-all; }
+    .share-result-pw { margin-top: 6px; font-family: monospace; font-size: 0.8rem; color: #e8613a; }
+
+    /* ===== VAULT（履歴／保存庫）===== */
+    #vault-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    #vault-overlay.show { display: flex; }
+    .vault-modal { width: 560px; }
+    .vault-current-label { font-size: 0.7rem; color: #888; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.04em; }
+    .vault-current-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .vault-publish { flex: 1; }
+    .vault-list-head { padding: 12px 20px 6px; font-size: 0.7rem; color: #888; font-weight: 700; border-top: 1px solid #333; letter-spacing: 0.04em; }
+    .vault-url { font-size: 0.68rem; color: #6ab0ff; margin-top: 3px; word-break: break-all; }
+    .vault-item.editing { background: rgba(232,97,58,0.10); }
+    .vault-actions { flex-wrap: wrap; justify-content: flex-end; gap: 5px; max-width: 250px; }
+
+    /* ===== APP HEADER (Creative Review ブランド行) ===== */
+    .appbar {
+      background: #242424; color: #fff; height: 44px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 18px; border-bottom: 1px solid #333;
+    }
+    .appbar-brand {
+      display: flex; align-items: center; gap: 9px;
+      font-size: 0.92rem; font-weight: 700; letter-spacing: 0.04em; color: #fff;
+    }
+    .appbar-brand .logo-dot { width: 9px; height: 9px; border-radius: 50%; background: #e8613a; flex-shrink: 0; }
+    .appbar-brand.clickable { cursor: pointer; transition: opacity 0.12s; }
+    .appbar-brand.clickable:hover { opacity: 0.75; }
+    .appbar-right { display: flex; align-items: center; gap: 14px; }
+
+    /* ===== 編集画面：ホームへ戻るボタン ===== */
+    .btn-home {
+      background: none; border: 1px solid #3a3a3a; color: #aaa; border-radius: 6px;
+      padding: 5px 11px; font-size: 0.74rem; font-family: inherit; cursor: pointer; line-height: 1;
+      display: flex; align-items: center; gap: 5px; transition: all 0.12s; white-space: nowrap;
+    }
+    .btn-home:hover { border-color: #666; color: #fff; }
+    /* SVGのインラインベースライン余白による微妙な縦ズレを解消 */
+    .btn-home svg, .home-subbar svg, .tool-btn svg, .btn-ghost svg, .btn-pdf svg { display: block; }
+
+    /* ===== ITEM NAME バー（旧メタバーを置換）===== */
+    .itembar {
+      background: #2c2c2c; padding: 0 18px; height: 42px;
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0; border-bottom: 1px solid #333;
+    }
+    .itemname-input {
+      background: transparent; border: none; border-bottom: 1.5px solid #444;
+      color: #fff; font-size: 0.95rem; font-weight: 600; font-family: inherit;
+      padding: 4px 4px; width: min(480px, 60%); transition: border-color 0.12s;
+    }
+    .itemname-input:focus { outline: none; border-bottom-color: #e8613a; }
+    .itemname-input::placeholder { color: #666; font-weight: 400; }
+
+    /* ===== レビューカードの種別ドロップダウン ===== */
+    .ann-type-select {
+      flex: 1; background: #fafaf8; border: 1px solid #e8e8e4; border-radius: 5px;
+      color: #777; font-size: 0.68rem; font-family: inherit; padding: 2px 6px;
+      cursor: pointer; max-width: 120px;
+    }
+    .ann-type-select:focus { outline: none; border-color: #bbb; }
+
+    /* ===== キャンバス下の「＋」追加ボタン ===== */
+    .canvas-add {
+      width: 44px; height: 44px; border-radius: 50%; border: none;
+      background: #3a3a3a; color: #ccc; font-size: 1.4rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      margin: 22px auto 8px; flex-shrink: 0; transition: all 0.14s;
+    }
+    .canvas-add:hover { background: #e8613a; color: #fff; }
+
+    /* ===== カラーピッカー（ツールバー）===== */
+    .color-wrap { position: relative; display: flex; align-items: center; }
+    .color-btn {
+      background: #333; border: 1px solid #444; border-radius: 6px; padding: 4px 6px;
+      cursor: pointer; display: flex; align-items: center; gap: 4px; transition: border-color 0.12s;
+    }
+    .color-btn:hover { border-color: #666; }
+    .color-dot { width: 15px; height: 15px; border-radius: 50%; display: block; box-shadow: 0 0 0 1.5px rgba(255,255,255,0.85) inset; }
+    .color-btn svg { color: #888; }
+    .color-pop {
+      position: absolute; top: 40px; left: 0; z-index: 50;
+      background: #2a2a2a; border: 1px solid #444; border-radius: 8px; padding: 8px;
+      display: none; grid-template-columns: repeat(4, 1fr); gap: 7px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .color-pop.show { display: grid; }
+    .color-swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); }
+    .color-swatch:hover { transform: scale(1.12); }
+    .color-swatch.sel { border-color: #fff; }
+
+    /* ===== トースト通知 ===== */
+    #cr-toast {
+      position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(10px);
+      background: #1a1a1a; color: #fff; padding: 11px 18px; border-radius: 10px;
+      font-size: 0.8rem; box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+      opacity: 0; pointer-events: none; transition: all 0.25s; z-index: 2000;
+      display: flex; align-items: center; gap: 14px; max-width: 90vw;
+    }
+    #cr-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+    #cr-toast.err { background: #8a2020; }
+    #cr-toast a { color: #ffb59c; text-decoration: underline; white-space: nowrap; }
+
+    /* ============================================================
+       HOME SCREEN（アイテム一覧）
+       ============================================================ */
+    #home-screen, #editor-screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    #home-screen.hidden, #editor-screen.hidden { display: none !important; }
+    /* 編集画面のツールバー(.topbar)と同じ高さ・配色に揃える */
+    .home-subbar {
+      background: #242424; height: 48px; flex-shrink: 0;
+      display: flex; align-items: center; padding: 0 16px; gap: 10px;
+      border-bottom: 1px solid #333;
+    }
+    /* ホーム位置を示すボタン（編集画面の戻るボタンと同じ見た目）。クリックで一覧の先頭へスクロール */
+    .home-subbar .btn-home { color: #fff; border-color: #4a4a4a; background: #333; cursor: pointer; }
+    .home-subbar .btn-home:hover { border-color: #666; background: #3d3d3d; }
+    .home-body { flex: 1; display: flex; overflow: hidden; min-height: 0; background: #ececea; }
+    .home-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .home-main-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 22px 10px; flex-shrink: 0;
+    }
+    .home-count { font-size: 0.78rem; color: #777; font-weight: 600; }
+    .home-count b { color: #1a1a1a; font-weight: 700; }
+    .view-toggle { display: flex; gap: 4px; }
+    .view-toggle button {
+      background: #fff; border: 1px solid #dcdcd6; color: #aaa; border-radius: 6px;
+      width: 30px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.12s;
+    }
+    .view-toggle button:hover { color: #666; border-color: #bbb; }
+    .view-toggle button.active { background: #242424; border-color: #242424; color: #fff; }
+
+    .home-scroll { flex: 1; overflow-y: auto; padding: 4px 22px 28px; }
+
+    /* グリッド表示 */
+    .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(186px, 1fr)); gap: 16px; }
+    .item-card {
+      background: #fff; border: 1.5px solid #e2e2dc; border-radius: 10px;
+      padding: 12px; cursor: pointer; transition: all 0.14s; display: flex; flex-direction: column;
+    }
+    .item-card:hover { border-color: #c4c4bc; box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
+    .item-card.selected { border-color: #e8613a; box-shadow: 0 0 0 1px #e8613a; }
+    .item-card-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; }
+    .item-card-name {
+      font-size: 0.8rem; font-weight: 600; color: #1a1a1a;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+    }
+    .item-card-name.untitled { color: #b4b4ac; font-weight: 400; }
+    .item-del {
+      background: none; border: none; color: #cfcfc8; cursor: pointer; padding: 2px;
+      line-height: 1; border-radius: 3px; flex-shrink: 0; display: flex;
+    }
+    .item-del:hover { color: #e03030; }
+    .item-thumb {
+      width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #8a8a86;
+      border-radius: 6px; display: block; margin-bottom: 10px;
+    }
+    .item-thumb.empty { display: flex; align-items: center; justify-content: center; color: #cfcfca; font-size: 1.6rem; background: #d8d8d2; }
+    .item-url-badge {
+      align-self: flex-start; font-size: 0.66rem; font-weight: 600; border-radius: 4px;
+      padding: 3px 9px; margin-bottom: 8px; border: none; font-family: inherit;
+    }
+    .item-url-badge.published { background: #e8613a; color: #fff; cursor: pointer; }
+    .item-url-badge.published:hover { background: #d45530; }
+    .item-url-badge.draft { background: #ececea; color: #999; cursor: default; }
+    .item-card-meta { font-size: 0.64rem; color: #999; line-height: 1.7; }
+
+    /* 新規作成カード */
+    .item-card.new {
+      align-items: center; justify-content: center; text-align: center;
+      border-style: dashed; border-color: #cfcfc8; background: #f7f7f4; min-height: 200px;
+    }
+    .item-card.new:hover { border-color: #e8613a; background: #fff; }
+    .item-card.new .plus-circle {
+      width: 52px; height: 52px; border-radius: 50%; background: #555; color: #fff;
+      display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 12px;
+      transition: background 0.14s;
+    }
+    .item-card.new:hover .plus-circle { background: #e8613a; }
+    .item-card.new .new-label { font-size: 0.8rem; font-weight: 600; color: #777; line-height: 1.5; }
+
+    /* リスト表示 */
+    .item-grid.list { display: flex; flex-direction: column; gap: 8px; }
+    .item-grid.list .item-card { flex-direction: row; align-items: center; gap: 14px; padding: 10px 14px; }
+    .item-grid.list .item-card-head { margin-bottom: 0; order: 2; flex: 1; }
+    .item-grid.list .item-thumb { width: 72px; aspect-ratio: 4/3; margin-bottom: 0; order: 1; flex-shrink: 0; }
+    .item-grid.list .item-url-badge { margin-bottom: 0; order: 3; }
+    .item-grid.list .item-card-meta { order: 4; text-align: right; white-space: nowrap; }
+    .item-grid.list .item-card.new { min-height: 0; flex-direction: row; justify-content: flex-start; }
+    .item-grid.list .item-card.new .plus-circle { width: 36px; height: 36px; font-size: 1.3rem; margin-bottom: 0; margin-right: 12px; }
+
+    /* 選択中のアイテム（右パネル）*/
+    .home-aside {
+      width: 290px; flex-shrink: 0; background: #e3e3df; border-left: 1px solid #d2d2cc;
+      display: flex; flex-direction: column; padding: 18px 16px; overflow-y: auto;
+    }
+    .aside-title { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #999; margin-bottom: 12px; }
+    .aside-empty { color: #aaa; font-size: 0.78rem; text-align: center; padding: 40px 10px; line-height: 1.9; }
+    .aside-thumb { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #9a9a96; border-radius: 8px; margin-bottom: 14px; }
+    .aside-thumb.empty { display: flex; align-items: center; justify-content: center; color: #cfcfca; font-size: 2rem; background: #cdcdc7; }
+    .aside-name { font-size: 0.92rem; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; word-break: break-word; }
+    .aside-name.untitled { color: #aaa; font-weight: 400; }
+    .aside-actions { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+    .btn-aside {
+      width: 100%; border: none; border-radius: 7px; padding: 10px; font-size: 0.8rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.12s;
+    }
+    .btn-aside.open { background: #242424; color: #fff; }
+    .btn-aside.open:hover { background: #000; }
+    .btn-aside.copy { background: #e8613a; color: #fff; border: 1px solid #e8613a; }
+    .btn-aside.copy:hover { background: #d45530; border-color: #d45530; }
+    .btn-aside.copy:disabled { background: #fff; color: #999; border-color: #c8c8c2; opacity: 0.55; cursor: default; }
+    .btn-aside.del { background: transparent; color: #b05050; border: 1px solid rgba(176,80,80,0.35); }
+    .btn-aside.del:hover { background: rgba(176,80,80,0.1); border-color: #b05050; color: #8a2020; }
+    .aside-meta { font-size: 0.7rem; color: #888; line-height: 2; border-top: 1px solid #d2d2cc; padding-top: 12px; }
   </style>
 </head>
 <body>
@@ -361,42 +613,97 @@
   <img id="img-preview-img" src="" alt="">
 </div>
 
-<!-- Draft modal -->
-<div id="draft-overlay" onclick="if(event.target===this)closeDraftPanel()">
-  <div class="draft-modal">
-    <div class="draft-modal-header">
-      <span class="draft-modal-title">📋 ドラフト</span>
-      <button class="draft-modal-close" onclick="closeDraftPanel()">✕</button>
-    </div>
-    <div class="draft-save-bar">
-      <div class="draft-name-row">
-        <input class="draft-name-input" id="draft-name-input" type="text" placeholder="ドラフト名（例：春夏LP v1）">
-        <button class="btn-save-draft" onclick="saveDraft()">現在の状態を保存</button>
+<!-- トースト通知 -->
+<div id="cr-toast"></div>
+
+<!-- Loading overlay -->
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">処理中...</div>
+</div>
+
+<!-- ============================================================
+     HOME SCREEN（アイテム一覧）
+     ============================================================ -->
+<div id="home-screen">
+  <div class="appbar">
+    <span class="appbar-brand clickable" onclick="scrollHomeTop()" title="一覧の先頭へ戻る"><span class="logo-dot"></span>Creative Review</span>
+  </div>
+  <div class="home-subbar">
+    <button class="btn-home" onclick="scrollHomeTop()" title="一覧の先頭へ戻る">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      <span class="btn-label">ホーム</span>
+    </button>
+    <button class="btn-home" onclick="clearAllItems()" title="登録したアイテムを全て削除">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      <span class="btn-label">全アイテムを削除</span>
+    </button>
+  </div>
+  <div class="home-body">
+    <div class="home-main">
+      <div class="home-main-head">
+        <div class="home-count">アイテム数 <b id="home-count-num">0</b>件 ｜ <span id="home-count-max">30</span>件まで</div>
+        <div class="view-toggle">
+          <button id="view-grid" class="active" onclick="setHomeView('grid')" title="グリッド表示">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+          </button>
+          <button id="view-list" onclick="setHomeView('list')" title="リスト表示">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="home-scroll">
+        <div class="item-grid" id="item-grid"></div>
       </div>
     </div>
-    <div class="draft-list" id="draft-list"></div>
+    <aside class="home-aside" id="home-aside"></aside>
   </div>
 </div>
 
-<!-- Loading overlay (PDF生成中) -->
-<div id="loading-overlay">
-  <div class="loading-spinner"></div>
-  <div class="loading-text">PDF を生成中...</div>
+<!-- ============================================================
+     EDITOR SCREEN（各アイテムの編集画面）
+     ============================================================ -->
+<div id="editor-screen" class="hidden">
+
+<!-- App header（ブランド＋自動保存ステータス）-->
+<div class="appbar">
+  <span class="appbar-brand clickable" onclick="goHome()" title="ホームへ戻る"><span class="logo-dot"></span>Creative Review</span>
+  <div class="appbar-right">
+    <span id="save-status"></span>
+  </div>
 </div>
 
 <!-- Topbar -->
 <div class="topbar">
-  <span class="topbar-logo"><span class="logo-dot"></span>修正依頼ツール</span>
+  <button class="btn-home" onclick="goHome()" title="ホームへ戻る（自動保存されます）">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+    <span class="btn-label">ホーム</span>
+  </button>
+
+  <div class="sep"></div>
 
   <div class="tool-group">
     <button class="tool-btn active" id="btn-pin" onclick="setTool('pin')" title="ピン">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>
       <span class="btn-label">ピン</span>
     </button>
-    <button class="tool-btn" id="btn-box" onclick="setTool('box')" title="エリア">
+    <button class="tool-btn" id="btn-box" onclick="setTool('box')" title="エリア (B)">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="1"/></svg>
       <span class="btn-label">エリア</span>
     </button>
+    <button class="tool-btn" id="btn-pen" onclick="setTool('pen')" title="ペン（フリーハンド） (D)">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      <span class="btn-label">ペン</span>
+    </button>
+  </div>
+
+  <!-- マーカーの色 -->
+  <div class="color-wrap">
+    <button class="color-btn" id="color-btn" onclick="toggleColorPop(event)" title="マーカーの色">
+      <span class="color-dot" id="color-dot" style="background:#e8613a"></span>
+      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="color-pop" id="color-pop"></div>
   </div>
 
   <div class="sep"></div>
@@ -414,41 +721,18 @@
     <span class="btn-label">全消去</span>
   </button>
 
-  <button class="btn-ghost" onclick="openDraftPanel()" title="ドラフトを保存・読み込み">
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-    <span class="btn-label">ドラフト</span>
-  </button>
-
   <div class="topbar-spacer"></div>
 
-  <span id="save-status"></span>
-
-  <button class="btn-ghost btn-danger" onclick="clearStorage()" title="保存データをすべて消去して最初からやり直す">
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-    <span class="btn-label">初期化</span>
-  </button>
-
-  <!-- 主アクション：PDF出力（常にラベル維持）-->
-  <button class="btn-pdf" onclick="exportPDF()">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-    PDF出力
+  <!-- 主アクション：URL書き出し（1クリックで共有URLを発行＋自動コピー。管理はホームで）-->
+  <button class="btn-pdf" id="btn-share" onclick="onShareBtn()" title="共有URLを発行して自動コピー（再発行は同じURLに更新）">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    URL書き出し
   </button>
 </div>
 
-<!-- Meta bar -->
-<div class="metabar">
-  <div class="meta-field">
-    <span class="meta-label">案件名</span>
-    <input class="meta-input" id="meta-project" type="text" placeholder="例：春夏LP">
-  </div>
-  <div class="meta-field">
-    <span class="meta-label">納期</span>
-    <input class="meta-input date" id="meta-deadline" type="date">
-  </div>
-  <div class="meta-field">
-    <span class="meta-label">書き出しファイル名</span>
-    <input class="meta-input" id="meta-pdfname" type="text" placeholder="例：230601_春夏LP修正依頼">
-  </div>
+<!-- Item name bar（旧メタバー。納期・ファイル名はURL書き出しモーダルへ移動）-->
+<div class="itembar">
+  <input class="itemname-input" id="meta-project" type="text" placeholder="アイテム名を入力（例：春夏LP 初校）">
 </div>
 
 <!-- Main -->
@@ -470,13 +754,14 @@
       <div id="canvas-container" class="tool-pin">
         <canvas id="main-canvas"></canvas>
       </div>
+      <button class="canvas-add" id="canvas-add" onclick="addPage()" title="ページを追加" style="display:none">＋</button>
     </div>
   </div>
 
   <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-header">
-      <span class="sidebar-title">変更リスト</span>
+      <span class="sidebar-title">レビューリスト</span>
       <span class="ann-count-badge zero" id="ann-badge">0</span>
     </div>
     <div class="annotation-list" id="annotation-list">
@@ -487,6 +772,8 @@
     </div>
   </div>
 </div>
+
+</div><!-- /editor-screen -->
 
 <script>
 // ===== DATA MODEL =====
@@ -500,6 +787,10 @@ let pages = [newPage('ページ 1')];
 let curIdx = 0;  // current page index
 let currentTool = 'pin';
 let dragState = null;
+let penState = null;   // ペン描画中の一時状態 { points:[{x,y}], color }
+let currentColor = (function(){ try { return localStorage.getItem('cr-color') || '#e8613a'; } catch(e){ return '#e8613a'; } })();
+let selectedAnnId = null;  // キャンバス上で選択中の注釈id
+let editDrag = null;       // 移動/リサイズ中の状態 { mode, id, handle?, start, orig }
 
 function pg() { return pages[curIdx]; }
 
@@ -517,12 +808,48 @@ function setTool(t) {
   currentTool = t;
   document.getElementById('btn-pin').classList.toggle('active', t === 'pin');
   document.getElementById('btn-box').classList.toggle('active', t === 'box');
+  const pb = document.getElementById('btn-pen');
+  if (pb) pb.classList.toggle('active', t === 'pen');
   container.className = 'tool-' + t;
+  container.style.cursor = ''; // ホバーで上書きしていたカーソルを戻す
 }
+
+// ===== カラー（マーカー色）=====
+const COLOR_PALETTE = ['#e8613a', '#e03131', '#f08c00', '#2f9e44', '#1c7ed6', '#7048e8', '#1a1a1a', '#ffffff'];
+function buildColorPalette() {
+  const pop = document.getElementById('color-pop');
+  if (!pop) return;
+  pop.innerHTML = COLOR_PALETTE.map(c =>
+    `<button class="color-swatch${c === currentColor ? ' sel' : ''}" data-c="${c}" style="background:${c}" onclick="setColor('${c}')" title="${c}"></button>`
+  ).join('');
+  const dot = document.getElementById('color-dot');
+  if (dot) dot.style.background = currentColor;
+}
+function setColor(c) {
+  currentColor = c;
+  try { localStorage.setItem('cr-color', c); } catch (e) {}
+  const dot = document.getElementById('color-dot');
+  if (dot) dot.style.background = c;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.toggle('sel', s.dataset.c === c));
+  closeColorPop();
+}
+function toggleColorPop(e) {
+  if (e) e.stopPropagation();
+  const pop = document.getElementById('color-pop');
+  if (pop) pop.classList.toggle('show');
+}
+function closeColorPop() {
+  const pop = document.getElementById('color-pop');
+  if (pop) pop.classList.remove('show');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.color-wrap')) closeColorPop();
+});
 
 // ===== PAGE MANAGEMENT =====
 function activatePage(idx) {
   curIdx = idx;
+  selectedAnnId = null; editDrag = null; penState = null; // ページ切替で選択状態をリセット
   const p = pg();
   if (p.imgEl) {
     canvas.width  = p.canvasW * dpr;
@@ -536,6 +863,8 @@ function activatePage(idx) {
     dropZone.style.display = '';
     container.style.display = 'none';
   }
+  const addBtn = document.getElementById('canvas-add');
+  if (addBtn) addBtn.style.display = p.imgEl ? 'flex' : 'none';
   panel.scrollTop = 0;
   render();
   rebuildSidebar();
@@ -627,6 +956,18 @@ function fitDisplayWidth(natW, natH) {
   return Math.max(EDIT_MIN_W, w);
 }
 
+// 400px幅の高解像度サムネを生成（ホームカード/右パネル用）
+function makeThumbnail(img) {
+  const W = 400;
+  const h = Math.max(1, Math.round(W * img.naturalHeight / img.naturalWidth));
+  const tc = document.createElement('canvas');
+  tc.width = W; tc.height = h;
+  const x = tc.getContext('2d');
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.drawImage(img, 0, 0, W, h);
+  return tc.toDataURL('image/jpeg', 0.82);
+}
+
 function loadImageFile(file) {
   const url = URL.createObjectURL(file);
   const img = new Image();
@@ -642,10 +983,7 @@ function loadImageFile(file) {
     canvas.style.width  = p.canvasW + 'px';
     canvas.style.height = p.canvasH + 'px';
     // Generate thumbnail
-    const tc = document.createElement('canvas');
-    tc.width = 48; tc.height = Math.round(48 * p.canvasH / p.canvasW);
-    tc.getContext('2d').drawImage(img, 0, 0, tc.width, tc.height);
-    p.thumbnail = tc.toDataURL('image/jpeg', 0.7);
+    p.thumbnail = makeThumbnail(img);
     // Store at 2× display resolution (capped at original) for Retina quality on reload
     const storeW = Math.min(p.canvasW * 2, img.naturalWidth);
     const storeH = Math.round(storeW * img.naturalHeight / img.naturalWidth);
@@ -655,6 +993,8 @@ function loadImageFile(file) {
     p.imgDataURL = fc.toDataURL('image/jpeg', 0.92);
     dropZone.style.display = 'none';
     container.style.display = 'block';
+    const addBtn = document.getElementById('canvas-add');
+    if (addBtn) addBtn.style.display = 'flex';
     panel.scrollTop = 0;
     render();
     rebuildPageStrip();
@@ -673,52 +1013,117 @@ function render() {
   ctx.clearRect(0, 0, p.canvasW, p.canvasH);
   ctx.drawImage(p.imgEl, 0, 0, p.canvasW, p.canvasH);
   p.annotations.forEach(ann => {
-    if (ann.type === 'pin') drawPin(ctx, ann.x, ann.y, ann.num);
-    else                     drawBox(ctx, ann.x, ann.y, ann.w, ann.h, ann.num);
+    if (ann.type === 'pin')      drawPin(ctx, ann.x, ann.y, ann.num, 1, ann.color);
+    else if (ann.type === 'box') drawBox(ctx, ann.x, ann.y, ann.w, ann.h, ann.num, 1, ann.color);
+    else if (ann.type === 'pen') drawPen(ctx, ann.points, ann.num, 1, ann.color);
   });
   if (dragState && currentTool === 'box') {
     const x = Math.min(dragState.sx, dragState.cx), y = Math.min(dragState.sy, dragState.cy);
     const w = Math.abs(dragState.cx - dragState.sx), h = Math.abs(dragState.cy - dragState.sy);
     ctx.save();
-    ctx.strokeStyle = 'rgba(232,97,58,0.75)'; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
+    ctx.strokeStyle = _rgba(currentColor, 0.85); ctx.lineWidth = 2; ctx.setLineDash([5,4]);
     ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = 'rgba(232,97,58,0.06)'; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = _rgba(currentColor, 0.06); ctx.fillRect(x, y, w, h);
     ctx.restore();
+  }
+  if (penState && penState.points.length) {
+    drawPen(ctx, penState.points, '', 1, penState.color);
+  }
+  if (selectedAnnId != null) {
+    const sa = p.annotations.find(a => a.id === selectedAnnId);
+    if (sa) drawSelection(ctx, sa);
   }
   ctx.restore();
 }
 
-// ===== DRAW HELPERS (ctx as param — used for both canvas and PDF offscreen) =====
-// scale=1 は画面表示用、PDF出力時は scale=2 を渡して赤マークを大きく描く
-function drawPin(c, x, y, num, scale = 1) {
+// 選択中注釈のハイライト（青い破線＋エリアは四隅リサイズハンドル）
+const SEL_COLOR = '#1c7ed6';
+function drawSelection(c, a) {
+  c.save();
+  c.strokeStyle = SEL_COLOR; c.lineWidth = 1.5; c.setLineDash([4, 3]);
+  if (a.type === 'pin') {
+    c.beginPath(); c.arc(a.x, a.y, 15, 0, Math.PI * 2); c.stroke();
+  } else if (a.type === 'box') {
+    c.strokeRect(a.x - 2, a.y - 2, a.w + 4, a.h + 4);
+    c.setLineDash([]);
+    const hs = _boxHandles(a);
+    for (const k in hs) {
+      c.beginPath(); c.rect(hs[k].x - 4, hs[k].y - 4, 8, 8);
+      c.fillStyle = '#fff'; c.fill(); c.strokeStyle = SEL_COLOR; c.lineWidth = 1.5; c.stroke();
+    }
+  } else if (a.type === 'pen' && a.points) {
+    const b = penBBox(a);
+    c.strokeRect(b.x - 4, b.y - 4, b.w + 8, b.h + 8);
+  }
+  c.restore();
+}
+function penBBox(a) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  a.points.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); });
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+// ===== DRAW HELPERS (ctx as param — used for both canvas and 共有HTML offscreen) =====
+// scale=1 は画面表示用。color はアノテーション固有色（既定オレンジ）。
+const DEFAULT_COLOR = '#e8613a';
+// 16進カラー → rgba文字列（塗りの半透明用）
+function _rgb(hex) {
+  const h = (hex || DEFAULT_COLOR).replace('#', '');
+  return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
+}
+function _rgba(hex, a) {
+  const { r, g, b } = _rgb(hex);
+  return `rgba(${r},${g},${b},${a})`;
+}
+// 背景色に対して読みやすい文字色（明るい色には黒、暗い色には白）
+function _textOn(hex) {
+  const { r, g, b } = _rgb(hex);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.62 ? '#1a1a1a' : '#fff';
+}
+function _numBadge(c, bx, by, num, scale, color) {
   const r = 10 * scale;
   c.save();
   c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 6 * scale; c.shadowOffsetY = 2 * scale;
-  c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2);
-  c.fillStyle = '#e8613a'; c.fill();
-  c.strokeStyle = '#fff'; c.lineWidth = 2 * scale; c.stroke();
-  c.restore();
-  c.fillStyle = '#fff';
-  c.font = `bold ${(num > 9 ? 7 : 9) * scale}px -apple-system,sans-serif`;
-  c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillText(num, x, y + 0.5 * scale);
-}
-
-function drawBox(c, x, y, w, h, num, scale = 1) {
-  c.save();
-  c.strokeStyle = '#e8613a'; c.lineWidth = 2 * scale; c.setLineDash([]);
-  c.strokeRect(x, y, w, h);
-  c.fillStyle = 'rgba(232,97,58,0.07)'; c.fillRect(x, y, w, h);
-  const r = 10 * scale, bx = x + r + 2 * scale, by = y + r + 2 * scale;
-  c.shadowColor = 'rgba(0,0,0,0.4)'; c.shadowBlur = 5 * scale; c.shadowOffsetY = 2 * scale;
   c.beginPath(); c.arc(bx, by, r, 0, Math.PI * 2);
-  c.fillStyle = '#e8613a'; c.fill();
-  c.strokeStyle = '#fff'; c.lineWidth = 1.5 * scale; c.stroke();
+  c.fillStyle = color || DEFAULT_COLOR; c.fill();
+  // 明るいマーカーは白縁が背景に埋もれるのでグレー縁にする
+  c.strokeStyle = _textOn(color) === '#fff' ? '#fff' : '#888'; c.lineWidth = 2 * scale; c.stroke();
   c.restore();
-  c.fillStyle = '#fff';
+  c.fillStyle = _textOn(color);
   c.font = `bold ${(num > 9 ? 7 : 9) * scale}px -apple-system,sans-serif`;
   c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillText(num, bx, by + 0.5 * scale);
+}
+function drawPin(c, x, y, num, scale = 1, color = DEFAULT_COLOR) {
+  _numBadge(c, x, y, num, scale, color);
+}
+
+function drawBox(c, x, y, w, h, num, scale = 1, color = DEFAULT_COLOR) {
+  c.save();
+  c.strokeStyle = color || DEFAULT_COLOR; c.lineWidth = 2 * scale; c.setLineDash([]);
+  c.strokeRect(x, y, w, h);
+  c.fillStyle = _rgba(color, 0.07); c.fillRect(x, y, w, h);
+  c.restore();
+  const r = 10 * scale, bx = x + r + 2 * scale, by = y + r + 2 * scale;
+  _numBadge(c, bx, by, num, scale, color);
+}
+
+// フリーハンドのペン描画。points は CSSピクセル座標の配列 [{x,y},...]。
+// num が空のときは番号バッジを描かない（ドラッグ中プレビュー用）。
+function drawPen(c, points, num, scale = 1, color = DEFAULT_COLOR) {
+  if (!points || points.length < 1) return;
+  c.save();
+  c.strokeStyle = color || DEFAULT_COLOR; c.lineWidth = 3 * scale;
+  c.lineJoin = 'round'; c.lineCap = 'round'; c.setLineDash([]);
+  c.shadowColor = 'rgba(0,0,0,0.25)'; c.shadowBlur = 2 * scale; c.shadowOffsetY = 1 * scale;
+  c.beginPath();
+  c.moveTo(points[0].x, points[0].y);
+  if (points.length === 1) { c.lineTo(points[0].x + 0.1, points[0].y + 0.1); }
+  else { for (let i = 1; i < points.length; i++) c.lineTo(points[i].x, points[i].y); }
+  c.stroke();
+  c.restore();
+  if (num !== '' && num != null) _numBadge(c, points[0].x, points[0].y, num, scale, color);
 }
 
 // Render a page to a data URL（annScale=2 でPDF用に赤マークを大きく描画）
@@ -732,8 +1137,9 @@ function pageToDataURL(p, annScale = 1, format = 'image/png', quality = 1, expor
   oc_ctx.drawImage(p.imgEl, 0, 0, oc.width, oc.height);
   oc_ctx.scale(exportScale, exportScale);
   p.annotations.forEach(ann => {
-    if (ann.type === 'pin') drawPin(oc_ctx, ann.x, ann.y, ann.num, annScale);
-    else                     drawBox(oc_ctx, ann.x, ann.y, ann.w, ann.h, ann.num, annScale);
+    if (ann.type === 'pin')      drawPin(oc_ctx, ann.x, ann.y, ann.num, annScale, ann.color);
+    else if (ann.type === 'box') drawBox(oc_ctx, ann.x, ann.y, ann.w, ann.h, ann.num, annScale, ann.color);
+    else if (ann.type === 'pen') drawPen(oc_ctx, ann.points, ann.num, annScale, ann.color);
   });
   return oc.toDataURL(format, quality);
 }
@@ -743,17 +1149,127 @@ function canvasPos(e) {
   const r = canvas.getBoundingClientRect();
   return { x: e.clientX - r.left, y: e.clientY - r.top };
 }
+function _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function _distSeg(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+  if (l2 === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2; t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+function _boxHandles(a) {
+  return { nw: { x: a.x, y: a.y }, ne: { x: a.x + a.w, y: a.y }, sw: { x: a.x, y: a.y + a.h }, se: { x: a.x + a.w, y: a.y + a.h } };
+}
+function _handleAt(a, pos) {
+  if (a.type !== 'box') return null;
+  const hs = _boxHandles(a);
+  for (const k in hs) { if (Math.hypot(pos.x - hs[k].x, pos.y - hs[k].y) <= 9) return k; }
+  return null;
+}
+function _annHit(a, pos) {
+  if (a.type === 'pin') return Math.hypot(pos.x - a.x, pos.y - a.y) <= 13;
+  if (a.type === 'box') return pos.x >= a.x - 3 && pos.x <= a.x + a.w + 3 && pos.y >= a.y - 3 && pos.y <= a.y + a.h + 3;
+  if (a.type === 'pen' && a.points) {
+    for (let i = 1; i < a.points.length; i++) if (_distSeg(pos, a.points[i - 1], a.points[i]) <= 7) return true;
+    return a.points.some(pt => Math.hypot(pos.x - pt.x, pos.y - pt.y) <= 7);
+  }
+  return false;
+}
+// 最前面（配列末尾優先）の注釈を返す
+function annAt(pos) {
+  const anns = pg().annotations;
+  for (let i = anns.length - 1; i >= 0; i--) if (_annHit(anns[i], pos)) return anns[i];
+  return null;
+}
+function _annSnapshot(a) {
+  return { x: a.x, y: a.y, w: a.w, h: a.h, points: a.points ? a.points.map(p => ({ x: p.x, y: p.y })) : null };
+}
+// 選択（キャンバス↔レビューリストの相互ハイライト。リスト再構築せずクラスのみ更新＝入力フォーカス保持）
+function selectAnn(id) {
+  selectedAnnId = id;
+  document.querySelectorAll('.annotation-item').forEach(el => el.classList.toggle('sel', el.id === 'item-' + id));
+  if (id != null) { const el = document.getElementById('item-' + id); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' }); }
+  render();
+}
+// アイドル時のカーソル（移動=move／ハンドル=リサイズ／それ以外はツールの十字）
+function _updateHoverCursor(pos) {
+  if (!pg().imgEl) { container.style.cursor = ''; return; }
+  let cur = '';
+  if (selectedAnnId != null) {
+    const sel = pg().annotations.find(a => a.id === selectedAnnId);
+    if (sel && sel.type === 'box') {
+      const h = _handleAt(sel, pos);
+      if (h) cur = (h === 'nw' || h === 'se') ? 'nwse-resize' : 'nesw-resize';
+    }
+  }
+  if (!cur) cur = annAt(pos) ? 'move' : '';
+  container.style.cursor = cur;
+}
+
 canvas.addEventListener('mousedown', e => {
   const pos = canvasPos(e);
+  // 1) 選択中エリアのリサイズハンドル
+  if (selectedAnnId != null) {
+    const sel = pg().annotations.find(a => a.id === selectedAnnId);
+    if (sel && sel.type === 'box') {
+      const h = _handleAt(sel, pos);
+      if (h) { editDrag = { mode: 'resize', id: sel.id, handle: h, start: pos, orig: _annSnapshot(sel) }; return; }
+    }
+  }
+  // 2) 既存注釈の本体 → 選択して移動
+  const hit = annAt(pos);
+  if (hit) {
+    selectAnn(hit.id);
+    editDrag = { mode: 'move', id: hit.id, start: pos, orig: _annSnapshot(hit) };
+    return;
+  }
+  // 3) 空白クリック → 選択解除＋ツールに応じて新規作成
+  if (selectedAnnId != null) selectAnn(null);
   if (currentTool === 'pin') addAnnotation({ type: 'pin', x: pos.x, y: pos.y });
+  else if (currentTool === 'pen') penState = { points: [{ x: pos.x, y: pos.y }], color: currentColor };
   else dragState = { sx: pos.x, sy: pos.y, cx: pos.x, cy: pos.y };
 });
 // mousemove / mouseup は document レベルで監視する（canvas外でもドラッグを継続するため）
 document.addEventListener('mousemove', e => {
-  if (!dragState) return;
-  const pos = canvasPos(e); dragState.cx = pos.x; dragState.cy = pos.y; render();
+  if (editDrag) {
+    const pos = canvasPos(e), dx = pos.x - editDrag.start.x, dy = pos.y - editDrag.start.y;
+    const a = pg().annotations.find(x => x.id === editDrag.id);
+    if (!a) { editDrag = null; return; }
+    const o = editDrag.orig, cw = pg().canvasW, ch = pg().canvasH;
+    if (editDrag.mode === 'move') {
+      if (a.type === 'pin') { a.x = _clamp(o.x + dx, 0, cw); a.y = _clamp(o.y + dy, 0, ch); }
+      else if (a.type === 'box') { a.x = o.x + dx; a.y = o.y + dy; }
+      else if (a.type === 'pen' && o.points) { a.points = o.points.map(p => ({ x: p.x + dx, y: p.y + dy })); }
+    } else { // resize（エリアの四隅）
+      let x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h;
+      if (editDrag.handle.includes('w')) x1 = o.x + dx;
+      if (editDrag.handle.includes('e')) x2 = o.x + o.w + dx;
+      if (editDrag.handle.includes('n')) y1 = o.y + dy;
+      if (editDrag.handle.includes('s')) y2 = o.y + o.h + dy;
+      a.x = Math.min(x1, x2); a.y = Math.min(y1, y2);
+      a.w = Math.max(8, Math.abs(x2 - x1)); a.h = Math.max(8, Math.abs(y2 - y1));
+    }
+    render(); return;
+  }
+  if (penState) {
+    const pos = canvasPos(e);
+    const last = penState.points[penState.points.length - 1];
+    // 微小移動は間引いて点数を抑える（軽量化）
+    if (!last || Math.abs(pos.x - last.x) + Math.abs(pos.y - last.y) >= 2) penState.points.push({ x: pos.x, y: pos.y });
+    render(); return;
+  }
+  if (dragState) {
+    const pos = canvasPos(e); dragState.cx = pos.x; dragState.cy = pos.y; render(); return;
+  }
+  // アイドル：カーソルフィードバック
+  _updateHoverCursor(canvasPos(e));
 });
 document.addEventListener('mouseup', e => {
+  if (editDrag) { editDrag = null; saveToStorage(); render(); return; }
+  if (penState) {
+    const pts = penState.points;
+    if (pts.length > 1) addAnnotation({ type: 'pen', points: pts, color: penState.color });
+    penState = null; render(); return;
+  }
   if (!dragState) return;
   const pos = canvasPos(e);
   const w = pos.x - dragState.sx, h = pos.y - dragState.sy;
@@ -768,8 +1284,9 @@ document.addEventListener('mouseup', e => {
 function addAnnotation(data) {
   const p = pg();
   p.redoStack = []; // 新規追加時はredoをクリア
-  const ann = { ...data, num: p.nextNum++, id: Date.now(), text: '', images: [] };
+  const ann = { ...data, num: p.nextNum++, id: Date.now(), text: '', images: [], color: data.color || currentColor };
   p.annotations.push(ann);
+  selectedAnnId = ann.id; // 作成直後は選択状態（エリアは即リサイズ可）
   render(); rebuildSidebar(); rebuildPageStrip();
   saveToStorage();
   setTimeout(() => {
@@ -782,6 +1299,7 @@ function removeAnnotation(id) {
   p.annotations = p.annotations.filter(a => a.id !== id);
   p.annotations.forEach((a, i) => a.num = i + 1);
   p.nextNum = p.annotations.length + 1;
+  if (selectedAnnId === id) selectedAnnId = null;
   render(); rebuildSidebar(); rebuildPageStrip();
   saveToStorage();
 }
@@ -893,7 +1411,7 @@ function rebuildSidebar() {
   }
   const saved = {};
   document.querySelectorAll('.ann-text[data-id]').forEach(el => { saved[el.dataset.id] = el.value; });
-  list.innerHTML = p.annotations.map(ann => {
+  list.innerHTML = p.annotations.map((ann, i) => {
     const imgs = (ann.images && ann.images.length)
       ? `<div class="ann-images">${ann.images.map((src, idx) => `
           <div class="ann-img-wrap">
@@ -902,11 +1420,17 @@ function rebuildSidebar() {
           </div>`).join('')}</div>`
       : '';
     return `
-    <div class="annotation-item" id="item-${ann.id}">
-      <div class="ann-header">
-        <span class="ann-num">${ann.num}</span>
-        <span class="ann-type-label">${ann.type === 'pin' ? '📍 ピン' : '□ エリア指定'}</span>
-        <button class="ann-delete" onclick="removeAnnotation(${ann.id})" title="削除">✕</button>
+    <div class="annotation-item${ann.id === selectedAnnId ? ' sel' : ''}" id="item-${ann.id}"
+      ondragover="onAnnDragOver(event, ${i})" ondrop="onAnnDrop(event, ${i})">
+      <div class="ann-header" onclick="selectAnn(${ann.id})" title="クリックでキャンバス上の位置を選択">
+        <span class="ann-grip" draggable="true" ondragstart="onAnnDragStart(event, ${i})" ondragend="onAnnDragEnd(event)" onclick="event.stopPropagation()" title="ドラッグで並べ替え">
+          <svg width="10" height="15" viewBox="0 0 10 15" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.4"/><circle cx="7.5" cy="2.5" r="1.4"/><circle cx="2.5" cy="7.5" r="1.4"/><circle cx="7.5" cy="7.5" r="1.4"/><circle cx="2.5" cy="12.5" r="1.4"/><circle cx="7.5" cy="12.5" r="1.4"/></svg>
+        </span>
+        <span class="ann-num" style="background:${ann.color || '#e8613a'};color:${_textOn(ann.color || '#e8613a')}">${ann.num}</span>
+        <span class="ann-type-label">${ann.type === 'pin' ? '● ピン' : ann.type === 'box' ? '▢ エリア' : '✎ ペン'}</span>
+        <button class="ann-delete" onclick="event.stopPropagation();removeAnnotation(${ann.id})" title="削除">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
       </div>
       <textarea class="ann-text" data-id="${ann.id}"
         placeholder="修正依頼を記入&#10;例：フォントを明朝体→ゴシック体に変更"
@@ -932,6 +1456,9 @@ function syncText(id, value) {
   if (ann) ann.text = value;
   debouncedSave();
 }
+
+// （旧 changeAnnType ＝種別ドロップダウンは撤去。エリア範囲がリセットされる破壊的挙動を避けるため、
+//   種別は作成時に確定・以後は静的ラベル表示とする。種別を変えたい場合は削除して引き直す。）
 
 // ===== IMAGE ATTACHMENT =====
 let _pendingAttachAnnId = null;
@@ -1013,6 +1540,53 @@ function removeAnnImage(annId, imgIdx) {
   });
 })();
 
+// ===== レビューカードの並べ替え（ドラッグ）＋ 空白クリックで選択解除 =====
+let _dragAnnFrom = null;
+function onAnnDragStart(e, idx) {
+  _dragAnnFrom = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', String(idx)); } catch (_) {}
+  const item = e.target.closest('.annotation-item');
+  if (item) {
+    // カードのブロック全体をドラッグ中のゴースト画像にする（掴んで動かしている体感）
+    try {
+      const r = item.getBoundingClientRect();
+      const ox = e.clientX - r.left, oy = e.clientY - r.top;
+      e.dataTransfer.setDragImage(item, ox > 0 ? ox : 24, oy > 0 ? oy : 18);
+    } catch (_) {}
+    setTimeout(() => item.classList.add('dragging'), 0);
+  }
+}
+function onAnnDragOver(e, idx) {
+  if (_dragAnnFrom === null) return; // 画像ファイルD&Dには反応しない
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const item = e.currentTarget;
+  document.querySelectorAll('.annotation-item.row-over').forEach(el => { if (el !== item) el.classList.remove('row-over'); });
+  if (idx !== _dragAnnFrom) item.classList.add('row-over');
+}
+function onAnnDrop(e, idx) {
+  if (_dragAnnFrom === null) return;
+  e.preventDefault(); e.stopPropagation(); // 画像添付dropと二重処理しない
+  const from = _dragAnnFrom; _dragAnnFrom = null;
+  const arr = pg().annotations;
+  if (from !== idx && from >= 0 && from < arr.length && idx >= 0 && idx < arr.length) {
+    const [moved] = arr.splice(from, 1);
+    arr.splice(idx, 0, moved);
+    arr.forEach((a, i) => a.num = i + 1); // 番号を振り直し
+    pg().nextNum = arr.length + 1;
+    render(); rebuildSidebar(); rebuildPageStrip(); saveToStorage();
+  }
+}
+function onAnnDragEnd() {
+  _dragAnnFrom = null;
+  document.querySelectorAll('.annotation-item').forEach(el => el.classList.remove('dragging', 'row-over'));
+}
+// サイドバーの空白部分クリックで選択解除（カード内クリックは対象外）
+document.querySelector('.sidebar').addEventListener('click', e => {
+  if (!e.target.closest('.annotation-item')) selectAnn(null);
+});
+
 function openImgPreview(src) {
   document.getElementById('img-preview-img').src = src;
   document.getElementById('img-preview-overlay').classList.add('show');
@@ -1067,19 +1641,27 @@ function embedJPFont(doc) {
 // ===== 指示リストの実テキスト描画（mm・選択/コピー可能） =====
 const _ptToMm = pt => pt / 72 * 25.4;
 // 折り返し: 英数字・記号のまとまりは途中で切らず、日本語は1文字単位で折り返す
+// 手動改行(\n)は強制改行として段落に分割し、各段落を独立に折り返す。
+// （jsPDFの doc.text は文字列内 \n を独自leading=1.15で内部改行するため、
+//  \n を含む行を返すと行間が崩れ・重なる。必ずここで物理行に分解する）
 function wrapJP(doc, text, maxW) {
   const NB = /[0-9A-Za-z#\.\-_/%@&\+:]/;
-  const units = []; let buf = '';
-  for (const ch of text) { if (NB.test(ch)) { buf += ch; } else { if (buf) { units.push(buf); buf = ''; } units.push(ch); } }
-  if (buf) units.push(buf);
-  const lines = []; let line = '';
-  for (const u of units) {
-    const test = line + u;
-    if (doc.getTextWidth(test) > maxW && line !== '') { lines.push(line); line = (u === ' ' ? '' : u); }
-    else line = test;
+  const out = [];
+  const paragraphs = String(text == null ? '' : text).replace(/\r\n?/g, '\n').split('\n');
+  for (const para of paragraphs) {
+    if (para === '') { out.push(''); continue; } // 空行（連続改行）を保持
+    const units = []; let buf = '';
+    for (const ch of para) { if (NB.test(ch)) { buf += ch; } else { if (buf) { units.push(buf); buf = ''; } units.push(ch); } }
+    if (buf) units.push(buf);
+    let line = '';
+    for (const u of units) {
+      const test = line + u;
+      if (doc.getTextWidth(test) > maxW && line !== '') { out.push(line); line = (u === ' ' ? '' : u); }
+      else line = test;
+    }
+    out.push(line);
   }
-  if (line !== '') lines.push(line);
-  return lines.length ? lines : [''];
+  return out.length ? out : [''];
 }
 const ANN_FS = { body: 8, type: 6, head: 6.5, page: 6, num: 6 }; // pt
 const ANN_LH = 1.55;
@@ -1201,9 +1783,11 @@ function drawAnn(doc, anns, x, y, colW, isLand, multi, pi, total, imgDims, imgH,
   }
 }
 
-// ===== HTML EXPORT =====
-// 全アノテーションデータ・画像・テキストをbase64埋め込みした自己完結型HTMLを生成・ダウンロード
-function exportHTML() {
+// ===== 共有HTML生成（URL共有用。旧 exportHTML を復活・転用）=====
+// アノテーション済み画像・指示・ページを全て埋め込んだ自己完結HTMLを「文字列で返す」。
+// ダウンロードはせず、Workerへ送ってURLを発行する publishShare() から呼ばれる。
+// 画像ズーム／ページナビ／トップへ戻る等のビューア機能を内包する。
+function buildShareHTML() {
   // scriptタグをソースコード上に直接書くとHTMLパーサーがブロックを強制終了するため
   // 変数に分割して ${}展開で渡す
   const _so = '<' + 'script>';
@@ -1216,17 +1800,23 @@ function exportHTML() {
   });
 
   const withImg = pages.filter(p => p.imgEl);
-  if (!withImg.length) { alert('画像をアップロードしてください。'); return; }
+  if (!withImg.length) { alert('画像をアップロードしてください。'); return null; }
 
-  const project     = document.getElementById('meta-project').value || '修正依頼';
-  const htmlname    = document.getElementById('meta-pdfname').value || `デザイン修正依頼_${project}`;
-  const deadline    = document.getElementById('meta-deadline').value;
+  const project     = document.getElementById('meta-project').value.trim(); // アイテム名（無名なら空欄のまま）
+  const htmlname    = project || 'Creative Review'; // ブラウザタブ用のファイル名フォールバック
   const today       = new Date().toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' });
-  const deadlineStr = deadline
-    ? new Date(deadline).toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' }) : '';
 
   // 各ページのアノテーション済み画像をJPEG圧縮でdata URL化（PNGより50〜70%軽量）
-  const pageImages = withImg.map(p => pageToDataURL(p, 0.85, 'image/jpeg', 0.90));
+  // 左画像の解像度。WebPで軽量化した余力を使いさらに高精細化（exportScale 2.4 → 3.0）。
+  // WebP形式：同画質でJPEGより25〜35%軽量。主要ブラウザは全て対応。
+  // 安全策：解像度を上げてもブラウザのcanvasサイズ上限で出力が壊れないよう、
+  //         1辺が SHARE_MAX_PX を超えない範囲に exportScale を自動で頭打ちにする。
+  const SHARE_SCALE = 3.0;
+  const SHARE_MAX_PX = 14000;
+  const pageImages = withImg.map(p => {
+    const safeScale = Math.min(SHARE_SCALE, SHARE_MAX_PX / p.canvasW, SHARE_MAX_PX / p.canvasH);
+    return pageToDataURL(p, 0.85, 'image/webp', 0.90, safeScale);
+  });
 
   // ページナビHTMLを生成（2ページ以上の場合のみ）
   const navHtml = withImg.length > 1
@@ -1246,11 +1836,12 @@ function exportHTML() {
                 `<img src="${src}" class="att-img" alt="">`
               ).join('')}</div>`
             : '';
+          const tlabel = ann.type === 'pin' ? 'ピン指定' : ann.type === 'box' ? 'エリア指定' : 'ペン（フリーハンド）';
           return `
             <div class="ann-row">
-              <div class="ann-num">${ann.num}</div>
+              <div class="ann-num" style="background:${ann.color || '#e8613a'};color:${_textOn(ann.color || '#e8613a')}">${ann.num}</div>
               <div class="ann-body">
-                <div class="ann-type">${ann.type === 'pin' ? 'ピン指定' : 'エリア指定'}</div>
+                <div class="ann-type">${tlabel}</div>
                 <div class="ann-text">${txt}</div>
                 ${imgsHtml}
               </div>
@@ -1288,7 +1879,7 @@ function exportHTML() {
           <div class="col-sep"></div>
           <div class="col-ann">
             ${pageLabelHtml}
-            <div class="ann-list-title">変更リスト</div>
+            <div class="ann-list-title">レビューリスト</div>
             ${annRows}
           </div>
         </div>
@@ -1312,14 +1903,8 @@ function exportHTML() {
       display: flex; justify-content: space-between; align-items: flex-end;
       padding-bottom: 10px; border-bottom: 2.5px solid #1a1a1a; margin-bottom: 8px;
     }
-    .doc-title { font-size: 20px; font-weight: 800; letter-spacing: 0.02em; display: flex; align-items: center; gap: 8px; }
-    .doc-title-dot { width: 10px; height: 10px; border-radius: 50%; background: #e8613a; flex-shrink: 0; display: inline-block; }
+    .doc-title { font-size: 20px; font-weight: 800; letter-spacing: 0.02em; }
     .doc-meta { font-size: 11px; color: #666; text-align: right; line-height: 2; }
-    .project-bar {
-      background: #f5f5f1; padding: 6px 12px; font-size: 12px;
-      border-radius: 4px; margin-bottom: 20px;
-    }
-    .project-bar strong { color: #555; }
     .page-nav {
       display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
       margin-bottom: 16px; padding: 8px 12px;
@@ -1378,7 +1963,16 @@ function exportHTML() {
     .page-cols { display: flex; align-items: flex-start; }
     .col-img { width: 62%; flex-shrink: 0; }
     .img-scroll { padding: 16px; overflow: auto; }
+    /* 拡大時：横スクロール可能と分かるよう、手のひらカーソル＋常時スクロールバー表示 */
+    .img-scroll.zoomed, .att-imgs.zoomed { cursor: grab; }
+    .img-scroll.zoomed.panning, .att-imgs.zoomed.panning { cursor: grabbing; }
+    .img-scroll.zoomed::-webkit-scrollbar, .att-imgs.zoomed::-webkit-scrollbar { height: 11px; width: 11px; -webkit-appearance: none; }
+    .img-scroll.zoomed::-webkit-scrollbar-thumb, .att-imgs.zoomed::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.32); border-radius: 6px; border: 2px solid #fff; }
+    .img-scroll.zoomed::-webkit-scrollbar-track, .att-imgs.zoomed::-webkit-scrollbar-track { background: rgba(0,0,0,0.06); }
+    .img-scroll.zoomed { scrollbar-width: thin; }
     .col-img img { width: 100%; height: auto; display: block; border-radius: 3px; transition: width 0.12s; }
+    /* ドラッグでパン中は画像のドラッグゴーストを抑止 */
+    .img-scroll.panning img, .att-imgs.panning img { pointer-events: none; }
     .col-sep { width: 1px; background: #e8e8e4; align-self: stretch; flex-shrink: 0; }
     .col-ann { flex: 1; padding: 16px; min-width: 0; }
     .page-label {
@@ -1400,6 +1994,7 @@ function exportHTML() {
       width: 18px; height: 18px; min-width: 18px; background: #e8613a;
       color: #fff; border-radius: 50%; font-size: 8px; font-weight: 700;
       text-align: center; line-height: 18px; flex-shrink: 0;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.16);
     }
     .ann-body { flex: 1; min-width: 0; }
     .ann-type { font-size: 9px; color: #bbb; margin-bottom: 3px; }
@@ -1430,13 +2025,11 @@ function exportHTML() {
 <button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">▲ トップへ</button>
 <div class="doc">
   <div class="doc-header">
-    <span class="doc-title"><span class="doc-title-dot"></span>デザイン修正依頼書</span>
+    <span class="doc-title">${escHtml(project)}</span>
     <div class="doc-meta">
       <div>作成日：${today}</div>
-      ${deadlineStr ? `<div>修正納期：${deadlineStr}</div>` : ''}
     </div>
   </div>
-  <div class="project-bar"><strong>案件名</strong>&ensp;${escHtml(project)}</div>
   ${navHtml}
   ${pagesHtml}
 </div>
@@ -1444,20 +2037,24 @@ ${_so}
 function zoomImg(btn, delta) {
   const page = btn.closest('.page-block');
   const img = page.querySelector('.col-img img');
+  const scroll = page.querySelector('.col-img .img-scroll');
   const label = btn.closest('.zoom-section').querySelector('.zoom-label');
   let scale = parseFloat(img.dataset.scale) || 1;
   scale = Math.min(4, Math.max(0.25, Math.round((scale + delta) * 100) / 100));
   img.dataset.scale = scale;
   img.style.width = (scale * 100) + '%';
   label.textContent = Math.round(scale * 100) + '%';
+  if (scroll) scroll.classList.toggle('zoomed', scale > 1.001);
 }
 function resetImg(btn) {
   const page = btn.closest('.page-block');
   const img = page.querySelector('.col-img img');
+  const scroll = page.querySelector('.col-img .img-scroll');
   const label = btn.closest('.zoom-section').querySelector('.zoom-label');
   img.dataset.scale = 1;
   img.style.width = '100%';
   label.textContent = '100%';
+  if (scroll) scroll.classList.remove('zoomed');
 }
 function zoomAnn(btn, delta) {
   const page = btn.closest('.page-block');
@@ -1468,6 +2065,7 @@ function zoomAnn(btn, delta) {
   scale = Math.min(4, Math.max(0.25, Math.round((scale + delta) * 100) / 100));
   ann.dataset.annScale = scale;
   imgs.forEach(img => { img.style.width = (scale * 100) + '%'; });
+  ann.querySelectorAll('.att-imgs').forEach(box => box.classList.toggle('zoomed', scale > 1.001));
   label.textContent = Math.round(scale * 100) + '%';
 }
 function resetAnn(btn) {
@@ -1477,8 +2075,26 @@ function resetAnn(btn) {
   const label = btn.closest('.zoom-section').querySelector('.zoom-label');
   ann.dataset.annScale = 1;
   imgs.forEach(img => { img.style.width = '100%'; });
+  ann.querySelectorAll('.att-imgs').forEach(box => box.classList.remove('zoomed'));
   label.textContent = '100%';
 }
+// 拡大時はドラッグでパン（手のひらツール）
+function enablePan(el) {
+  let panning = false, sx = 0, sy = 0, sl = 0, st = 0;
+  el.addEventListener('mousedown', e => {
+    if (!el.classList.contains('zoomed') || e.button !== 0) return;
+    panning = true; el.classList.add('panning');
+    sx = e.clientX; sy = e.clientY; sl = el.scrollLeft; st = el.scrollTop;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!panning) return;
+    el.scrollLeft = sl - (e.clientX - sx);
+    el.scrollTop = st - (e.clientY - sy);
+  });
+  window.addEventListener('mouseup', () => { if (panning) { panning = false; el.classList.remove('panning'); } });
+}
+document.querySelectorAll('.img-scroll, .att-imgs').forEach(enablePan);
 document.querySelectorAll('.img-scroll').forEach(scroll => {
   scroll.addEventListener('wheel', e => {
     if (!e.ctrlKey && !e.metaKey) return;
@@ -1508,15 +2124,218 @@ ${_sc}
 </body>
 </html>`;
 
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = htmlname.replace(/[\\/:*?"<>|]/g, '_') + '.html';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // ダウンロードせず、生成したHTML文字列を返す（publishShare がWorkerへ送信）
+  return html;
+}
+
+// ===== 履歴（保存庫）＝発行・再編集・PDFの統合 =====
+// 設計：URL＝保存単位。発行＝Cloudflareへ公開＋手元(localStorage)に編集用の元データを保存。
+//   - 元データ（画像・注釈・案件名）は VAULT_SRC_PREFIX+id でローカル保存（端末内）
+//   - 一覧表示用の軽い索引（タイトル/URL/PW/件数/日時）は VAULT_KEY に配列で保存
+//   - 公開ビューのHTMLはCloudflareに保存（外部閲覧用）
+//   - 「URL更新」＝同じidで上書き（URLは変わらない）
+const SHARE_ENDPOINT = 'https://revision-share.yukimiyakawa.workers.dev';
+const VAULT_KEY = 'revision-vault-index';
+const VAULT_SRC_PREFIX = 'revision-vault-src-';
+const VAULT_MAX = 30;
+let currentVaultId = null; // 編集中の保存庫項目のid（null＝新規）
+// リロード後も「現在の作業」を同じ保存庫idに紐づけ直す（重複URL発行を防ぐ）
+(function () {
+  try {
+    const s = localStorage.getItem('revision-vault-current');
+    if (s && loadVaultIndex().some(e => e.id === s)) currentVaultId = s;
+    else localStorage.removeItem('revision-vault-current');
+  } catch (e) {}
+})();
+
+// 編集画面のメインボタンの状態管理：
+//   未発行 or 発行後に編集あり → 「URL書き出し」(発行/更新)
+//   発行済み＆編集なし          → 「URLを開く」(別タブ表示＋コピー)
+let shareDirty = false;     // 直近の発行以降に編集が入ったか
+let _loadingItem = false;   // アイテム読込中（プログラム的な保存を編集とみなさないためのガード）
+const SHARE_ICON_PUBLISH = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+const SHARE_ICON_OPEN = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+
+function shareBtnMode() {
+  if (!currentVaultId) return 'publish';
+  const e = loadVaultIndex().find(x => x.id === currentVaultId);
+  return (e && e.url && !shareDirty) ? 'open' : 'publish';
+}
+function refreshShareBtn() {
+  const btn = document.getElementById('btn-share');
+  if (!btn) return;
+  if (shareBtnMode() === 'open') {
+    btn.innerHTML = SHARE_ICON_OPEN + ' URLを開く';
+    btn.title = '発行済みの共有URLを別タブで開く（URLもコピーされます）';
+  } else {
+    btn.innerHTML = SHARE_ICON_PUBLISH + ' URL書き出し';
+    btn.title = '共有URLを発行して自動コピー（再発行は同じURLに更新）';
+  }
+}
+function onShareBtn() {
+  if (shareBtnMode() === 'open') openCurrentItemUrl();
+  else publishCurrentItem();
+}
+function openCurrentItemUrl() {
+  const e = currentVaultId ? loadVaultIndex().find(x => x.id === currentVaultId) : null;
+  if (!e || !e.url) { refreshShareBtn(); return; }
+  window.open(e.url, '_blank', 'noopener');
+  try { navigator.clipboard.writeText(e.url); } catch (err) {}
+  showToast('✓ URLを開いてコピーしました', false);
+}
+
+function copyVaultText(text, btn) {
+  navigator.clipboard.writeText(text);
+  if (btn) { const o = btn.textContent; btn.textContent = 'コピー済'; setTimeout(() => { btn.textContent = o; }, 1200); }
+}
+
+// ---- 編集用の元データ（source）のシリアライズ／復元 ----
+function serializeSource() {
+  // DOMのテキストを同期
+  document.querySelectorAll('.ann-text[data-id]').forEach(el => {
+    const ann = pg().annotations.find(a => a.id == el.dataset.id);
+    if (ann) ann.text = el.value;
+  });
+  return {
+    curIdx,
+    meta: {
+      project:  document.getElementById('meta-project').value,
+    },
+    pages: pages.map(p => ({
+      id: p.id, label: p.label,
+      imgDataURL: p.imgDataURL || null,
+      thumbnail: p.thumbnail,
+      canvasW: p.canvasW, canvasH: p.canvasH,
+      nextNum: p.nextNum,
+      annotations: p.annotations.map(a => ({
+        id: a.id, num: a.num, type: a.type,
+        x: a.x, y: a.y, w: a.w, h: a.h,
+        points: a.points || null, color: a.color || null,
+        text: a.text, images: a.images || []
+      }))
+    }))
+  };
+}
+// source をツールに復元。画像ロード完了で resolve する Promise を返す。
+function applySource(data) {
+  return new Promise((resolve) => {
+    if (data.meta) {
+      document.getElementById('meta-project').value  = data.meta.project  || '';
+    }
+    pages = data.pages.map(pd => ({
+      id: pd.id, label: pd.label,
+      imgEl: null, imgDataURL: pd.imgDataURL || null,
+      thumbnail: pd.thumbnail,
+      canvasW: pd.canvasW, canvasH: pd.canvasH,
+      nextNum: pd.nextNum,
+      annotations: pd.annotations || [],
+      redoStack: []
+    }));
+    curIdx = Math.min(data.curIdx || 0, pages.length - 1);
+    let pending = pages.filter(p => p.imgDataURL).length;
+    if (pending === 0) { activatePage(curIdx); saveToStorage(); resolve(); return; }
+    pages.forEach(p => {
+      if (!p.imgDataURL) return;
+      const img = new Image();
+      img.onload = () => {
+        p.imgEl = img;
+        rescalePageToCurrentWidth(p);
+        // 旧データの低解像度サムネを高解像度に作り直す（自動アップグレード）
+        try { p.thumbnail = makeThumbnail(img); } catch (e) {}
+        pending--;
+        if (pending === 0) { activatePage(curIdx); saveToStorage(); resolve(); }
+      };
+      img.src = p.imgDataURL;
+    });
+  });
+}
+
+// ---- 索引（一覧用メタデータ）----
+function loadVaultIndex() {
+  try { return JSON.parse(localStorage.getItem(VAULT_KEY) || '[]'); } catch (e) { return []; }
+}
+function saveVaultIndex(arr) { localStorage.setItem(VAULT_KEY, JSON.stringify(arr)); }
+function vaultIndexUpsert(entry) {
+  const all = loadVaultIndex();
+  const prev = all.find(e => e.id === entry.id) || {};
+  // 既存メタ（サムネ・作成日など）を引き継ぎつつ上書き
+  entry = Object.assign({}, prev, entry);
+  if (!entry.createdAt) entry.createdAt = prev.createdAt || Date.now();
+  let idx = all.filter(e => e.id !== entry.id);
+  idx.unshift(entry); // 新しい順
+  // 30件上限：あふれた古い項目は元データもCloudflareも削除
+  while (idx.length > VAULT_MAX) {
+    const removed = idx.pop();
+    localStorage.removeItem(VAULT_SRC_PREFIX + removed.id);
+    fetch(SHARE_ENDPOINT + '/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: removed.id }) }).catch(() => {});
+  }
+  saveVaultIndex(idx);
+}
+
+// ---- 現在の作業の保存庫idを永続化（リロード後も同じURLへ更新できる）----
+function updateVaultCurrentUI() {
+  if (currentVaultId) localStorage.setItem('revision-vault-current', currentVaultId);
+  else localStorage.removeItem('revision-vault-current');
+}
+
+// ---- トースト通知 ----
+let _toastTimer = null;
+function showToast(msg, isErr, url) {
+  const t = document.getElementById('cr-toast');
+  if (!t) return;
+  const link = url ? ` <a href="${url}" target="_blank" rel="noopener">開く</a>` : '';
+  t.innerHTML = `<span>${escHtml(msg)}</span>${link}`;
+  t.classList.toggle('err', !!isErr);
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), url ? 4200 : 2600);
+}
+
+// ---- URL書き出し：1クリックで発行＋自動コピー（再発行は同じURLへ更新）----
+async function publishCurrentItem() {
+  if (!currentVaultId) { showToast('先にアイテムを開いてください', true); return; }
+  if (!pages.some(p => p.imgEl)) { showToast('画像を追加するとURLを発行できます', true); return; }
+  const shareBtn = document.getElementById('btn-share');
+  const title = (document.getElementById('meta-project').value || '無題のアイテム').trim();
+  const already = loadVaultIndex().find(e => e.id === currentVaultId);
+  const updating = !!(already && already.url);
+
+  const overlay = document.getElementById('loading-overlay');
+  const loadingText = overlay ? overlay.querySelector('.loading-text') : null;
+  if (loadingText) loadingText.textContent = updating ? '共有URLを更新中…' : '共有URLを生成中…';
+  if (overlay) overlay.classList.add('show');
+  if (shareBtn) shareBtn.disabled = true;
+  await new Promise(r => setTimeout(r, 60));
+
+  try {
+    const source = serializeSource();
+    const html = buildShareHTML();
+    if (!html) { if (overlay) overlay.classList.remove('show'); if (shareBtn) shareBtn.disabled = false; return; }
+    if (loadingText) loadingText.textContent = 'アップロード中…';
+    const payload = { html, password: null, id: currentVaultId };
+    const res = await fetch(SHARE_ENDPOINT + '/save', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.url) {
+      try { localStorage.setItem(VAULT_SRC_PREFIX + currentVaultId, JSON.stringify(source)); } catch (e) {}
+      const pageCount = source.pages.length;
+      const annCount = source.pages.reduce((s, p) => s + (p.annotations ? p.annotations.length : 0), 0);
+      const thumb = (source.pages[0] && source.pages[0].thumbnail) || null;
+      vaultIndexUpsert({ id: currentVaultId, title, url: data.url, password: null, date: new Date().toLocaleString('ja-JP', { hour12: false }), pageCount, annCount, thumbnail: thumb, updatedAt: Date.now() });
+      let copied = false;
+      try { await navigator.clipboard.writeText(data.url); copied = true; } catch (e) {}
+      showToast(copied ? (updating ? '✓ URLを更新してコピーしました' : '✓ 共有URLをコピーしました') : '✓ URLを発行しました', false, data.url);
+      shareDirty = false; refreshShareBtn();  // 発行直後はボタンを「URLを開く」へ
+    } else {
+      showToast('URLの発行に失敗しました：' + (data.error || '不明なエラー'), true);
+    }
+  } catch (e) {
+    showToast('通信エラー：' + e.message, true);
+  } finally {
+    if (overlay) overlay.classList.remove('show');
+    if (shareBtn) shareBtn.disabled = false;
+  }
 }
 
 // ===== PDF EXPORT (jsPDF 直接配置。ヘッダー・指示リストとも実テキスト描画) =====
@@ -1697,6 +2516,257 @@ async function exportPDF() {
   pdf.save(`${safeName}.pdf`);
 }
 
+// ============================================================
+// HOME（アイテム一覧）／画面遷移
+//   アイテム＝1レビュー案件。保存庫(Vault)の索引(VAULT_KEY)＋元データ(VAULT_SRC_PREFIX+id)を
+//   そのままアイテムとして扱う。URL未発行（下書き）も索引に載せる。
+// ============================================================
+const CR_VIEWMODE_KEY = 'cr-home-viewmode';
+const CR_CURRENT_KEY  = 'cr-current-item';
+let homeView = (localStorage.getItem(CR_VIEWMODE_KEY) === 'list') ? 'list' : 'grid';
+let homeSelectedId = null;
+
+// Worker(/save)が受理するid形式 [a-z0-9]{6,32} に合わせる（下書きidをそのまま発行idに使える）
+function genItemId() { return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+// 索引メタの作成・更新（並び替えはしない。新規時のみ先頭へ）
+function upsertItemMeta(id, patch, createIfMissing) {
+  let idx = loadVaultIndex();
+  let e = idx.find(x => x.id === id);
+  if (!e) {
+    if (!createIfMissing) return;
+    e = { id, title: '', url: null, password: null, createdAt: Date.now() };
+    idx.unshift(e);
+  }
+  Object.assign(e, patch);
+  saveVaultIndex(idx);
+}
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '—';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
+}
+function itemCreatedTs(e) { return e.createdAt || (e.date ? Date.parse(e.date) : 0) || 0; }
+
+// ---- 画面切替 ----
+function showHome() {
+  document.getElementById('editor-screen').classList.add('hidden');
+  document.getElementById('home-screen').classList.remove('hidden');
+  renderHome();
+}
+function showEditor() {
+  document.getElementById('home-screen').classList.add('hidden');
+  document.getElementById('editor-screen').classList.remove('hidden');
+  showSaveStatus('saved');
+  refreshShareBtn();
+  updateToolbarCompact();
+}
+function goHome() {
+  if (currentVaultId) saveToStorage();
+  showHome();
+}
+
+// ---- アイテム新規作成 ----
+function createItem() {
+  if (currentVaultId) saveToStorage();   // 直前のアイテムを保存
+  const id = genItemId();
+  currentVaultId = id;
+  localStorage.setItem(CR_CURRENT_KEY, id);
+  localStorage.setItem('revision-vault-current', id);
+  pages = [newPage('ページ 1')];
+  curIdx = 0;
+  document.getElementById('meta-project').value  = '';
+  setTool('pin');
+  activatePage(0);
+  upsertItemMeta(id, { title: '', thumbnail: null, pageCount: 1, annCount: 0, createdAt: Date.now(), updatedAt: Date.now() }, true);
+  saveToStorage();
+  shareDirty = false;  // 新規作成直後（未発行）
+  showEditor();
+  updateVaultCurrentUI();
+  const nm = document.getElementById('meta-project');
+  if (nm) setTimeout(() => nm.focus(), 40);
+}
+
+// ---- アイテムを開く ----
+async function openItem(id) {
+  if (currentVaultId && currentVaultId !== id) saveToStorage();
+  const raw = localStorage.getItem(VAULT_SRC_PREFIX + id);
+  if (!raw) { alert('このアイテムの編集データが手元にありません（別の端末で発行された可能性があります）。'); return; }
+  let data; try { data = JSON.parse(raw); } catch (e) { alert('アイテムの読み込みに失敗しました。'); return; }
+  currentVaultId = id;
+  localStorage.setItem(CR_CURRENT_KEY, id);
+  localStorage.setItem('revision-vault-current', id);
+  _loadingItem = true;            // 読込中の保存は編集とみなさない
+  await applySource(data);
+  _loadingItem = false;
+  shareDirty = false;             // 開いた直後は発行済み状態に合わせる（編集で書き出しへ戻る）
+  showEditor();
+  updateVaultCurrentUI();
+}
+
+// ---- アイテム削除（ホームから）----
+function deleteItem(id, ev) {
+  if (ev) ev.stopPropagation();
+  const e = loadVaultIndex().find(x => x.id === id);
+  const nm = e && e.title ? '「' + e.title + '」' : 'このアイテム';
+  if (!confirm(nm + ' を削除しますか？\n（発行済みの共有URLも無効になります）')) return;
+  saveVaultIndex(loadVaultIndex().filter(x => x.id !== id));
+  localStorage.removeItem(VAULT_SRC_PREFIX + id);
+  fetch(SHARE_ENDPOINT + '/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }).catch(() => {});
+  if (currentVaultId === id) { currentVaultId = null; localStorage.removeItem(CR_CURRENT_KEY); localStorage.removeItem('revision-vault-current'); }
+  if (homeSelectedId === id) homeSelectedId = null;
+  renderHome();
+}
+
+// ---- 表示切替（グリッド／リスト）----
+function setHomeView(v) {
+  homeView = v;
+  localStorage.setItem(CR_VIEWMODE_KEY, v);
+  document.getElementById('view-grid').classList.toggle('active', v === 'grid');
+  document.getElementById('view-list').classList.toggle('active', v === 'list');
+  document.getElementById('item-grid').classList.toggle('list', v === 'list');
+}
+
+// ---- 選択 ----
+function selectItem(id) {
+  homeSelectedId = id;
+  document.querySelectorAll('.item-card[data-id]').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
+  renderAside();
+}
+
+// ---- ホーム描画 ----
+function renderHome() {
+  const idx = loadVaultIndex().slice().sort((a, b) => itemCreatedTs(b) - itemCreatedTs(a));
+  document.getElementById('home-count-num').textContent = idx.length;
+  document.getElementById('home-count-max').textContent = VAULT_MAX;
+  const grid = document.getElementById('item-grid');
+  grid.classList.toggle('list', homeView === 'list');
+  document.getElementById('view-grid').classList.toggle('active', homeView === 'grid');
+  document.getElementById('view-list').classList.toggle('active', homeView === 'list');
+
+  const newCard = `
+    <div class="item-card new" onclick="createItem()" title="新しいアイテムを作成">
+      <div class="plus-circle">＋</div>
+      <div class="new-label">アイテム<br>新規作成</div>
+    </div>`;
+
+  const cards = idx.map(e => {
+    const published = !!e.url;
+    const thumb = e.thumbnail
+      ? `<img class="item-thumb" src="${e.thumbnail}" alt="">`
+      : `<div class="item-thumb empty">🖼️</div>`;
+    const badge = published
+      ? `<button class="item-url-badge published" onclick="openItemUrl('${e.id}', event, this)">URLを開く</button>`
+      : `<span class="item-url-badge draft">URL未発行</span>`;
+    const title = e.title
+      ? `<span class="item-card-name">${escHtml(e.title)}</span>`
+      : `<span class="item-card-name untitled">無題のアイテム</span>`;
+    return `
+    <div class="item-card${e.id === homeSelectedId ? ' selected' : ''}" data-id="${e.id}"
+         onclick="selectItem('${e.id}')" ondblclick="openItem('${e.id}')" title="クリックで選択・ダブルクリックで開く">
+      <div class="item-card-head">
+        ${title}
+        <button class="item-del" onclick="deleteItem('${e.id}', event)" title="削除">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>
+      ${thumb}
+      ${badge}
+      <div class="item-card-meta">レビュー数：${e.annCount != null ? e.annCount : 0}<br>作成日：${fmtDate(itemCreatedTs(e))}</div>
+    </div>`;
+  }).join('');
+
+  grid.innerHTML = newCard + cards;
+  renderAside();
+}
+
+function renderAside() {
+  const aside = document.getElementById('home-aside');
+  const e = homeSelectedId ? loadVaultIndex().find(x => x.id === homeSelectedId) : null;
+  if (!e) {
+    aside.innerHTML = `<div class="aside-title">選択中のアイテム</div><div class="aside-empty">カードをクリックすると<br>ここに詳細が表示されます</div>`;
+    return;
+  }
+  const published = !!e.url;
+  const thumb = e.thumbnail ? `<img class="aside-thumb" src="${e.thumbnail}" alt="">` : `<div class="aside-thumb empty">🖼️</div>`;
+  const title = e.title ? `<div class="aside-name">${escHtml(e.title)}</div>` : `<div class="aside-name untitled">無題のアイテム</div>`;
+  aside.innerHTML = `
+    <div class="aside-title">選択中のアイテム</div>
+    ${thumb}
+    ${title}
+    <div class="aside-actions">
+      <button class="btn-aside open" onclick="openItem('${e.id}')">アイテムを開く</button>
+      <button class="btn-aside copy" onclick="openItemUrl('${e.id}', event, this)" ${published ? '' : 'disabled'}>${published ? 'URLを開く' : 'URL未発行'}</button>
+      <button class="btn-aside del" onclick="deleteItem('${e.id}', event)">このアイテムを削除</button>
+    </div>
+    <div class="aside-meta">レビュー数：${e.annCount != null ? e.annCount : 0}<br>作成日：${fmtDate(itemCreatedTs(e))}<br>状態：${published ? 'URL発行済み' : '下書き（URL未発行）'}</div>`;
+}
+
+function copyItemUrl(id, ev, btn) {
+  if (ev) ev.stopPropagation();
+  const e = loadVaultIndex().find(x => x.id === id);
+  if (e && e.url) copyVaultText(e.url, btn);
+}
+
+// 発行済みURLを別タブで開き、同時にクリップボードへコピー
+function openItemUrl(id, ev, btn) {
+  if (ev) ev.stopPropagation();
+  const e = loadVaultIndex().find(x => x.id === id);
+  if (!e || !e.url) return;
+  window.open(e.url, '_blank', 'noopener');           // 別タブで開く
+  try { navigator.clipboard.writeText(e.url); } catch (err) {}  // URLもコピー
+  if (btn) { const o = btn.textContent; btn.textContent = '✓ 開く＆コピー'; setTimeout(() => { btn.textContent = o; }, 1300); }
+}
+
+// 一覧の先頭へスクロール（ホームボタン／ブランドタイトルから呼ぶ）
+function scrollHomeTop() {
+  const sc = document.querySelector('.home-scroll');
+  if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// 登録アイテムを全削除（発行済み共有URLもCloudflareから削除）
+function clearAllItems() {
+  const idx = loadVaultIndex();
+  if (!idx.length) { showToast('削除するアイテムがありません', true); return; }
+  if (!confirm('登録されている全 ' + idx.length + ' 件のアイテムを削除しますか？\n（発行済みの共有URLもすべて無効になります。この操作は元に戻せません）')) return;
+  idx.forEach(e => {
+    localStorage.removeItem(VAULT_SRC_PREFIX + e.id);
+    fetch(SHARE_ENDPOINT + '/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: e.id }) }).catch(() => {});
+  });
+  saveVaultIndex([]);
+  currentVaultId = null;
+  localStorage.removeItem(CR_CURRENT_KEY);
+  localStorage.removeItem('revision-vault-current');
+  homeSelectedId = null;
+  renderHome();
+  showToast('全アイテムを削除しました', false);
+}
+
+// ---- 起動時：旧「現在の作業」(STORAGE_KEY)をアイテムへ移行 ----
+function migrateLegacyToItems() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data || !data.pages || !data.pages.length) { localStorage.removeItem(STORAGE_KEY); return; }
+    let id = null;
+    try { id = localStorage.getItem('revision-vault-current'); } catch (e) {}
+    if (!id || !loadVaultIndex().some(x => x.id === id)) id = genItemId();
+    localStorage.setItem(VAULT_SRC_PREFIX + id, JSON.stringify(data));
+    const p0 = data.pages[0] || {};
+    const annCount = data.pages.reduce((s, p) => s + (p.annotations ? p.annotations.length : 0), 0);
+    upsertItemMeta(id, {
+      title: (data.meta && data.meta.project) || '',
+      thumbnail: p0.thumbnail || null,
+      pageCount: data.pages.length, annCount, updatedAt: Date.now()
+    }, true);
+    localStorage.removeItem(STORAGE_KEY); // srcへ移行したので旧バッファは撤去
+  } catch (e) {}
+}
+
 // ===== LOCAL STORAGE AUTO-SAVE =====
 const STORAGE_KEY = 'revision-request-v1';
 let _saveTimer = null;
@@ -1709,8 +2779,6 @@ function saveToStorage() {
       curIdx,
       meta: {
         project:  document.getElementById('meta-project').value,
-        deadline: document.getElementById('meta-deadline').value,
-        pdfname:  document.getElementById('meta-pdfname').value,
       },
       pages: pages.map(p => ({
         id:          p.id,
@@ -1723,11 +2791,31 @@ function saveToStorage() {
         annotations: p.annotations.map(a => ({
           id: a.id, num: a.num, type: a.type,
           x: a.x, y: a.y, w: a.w, h: a.h,
+          points: a.points || null, color: a.color || null,
           text: a.text, images: a.images || []
         }))
       }))
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (currentVaultId) {
+      // アイテムの元データ(src)へ保存し、ホーム索引のメタ（サムネ・件数・タイトル）も更新
+      localStorage.setItem(VAULT_SRC_PREFIX + currentVaultId, JSON.stringify(data));
+      localStorage.setItem(CR_CURRENT_KEY, currentVaultId);
+      const p0 = data.pages[0] || {};
+      const annCount = data.pages.reduce((s, p) => s + (p.annotations ? p.annotations.length : 0), 0);
+      upsertItemMeta(currentVaultId, {
+        title: data.meta.project || '',
+        thumbnail: p0.thumbnail || null,
+        pageCount: data.pages.length,
+        annCount,
+        updatedAt: Date.now()
+      }, true);
+    } else {
+      // フォールバック（アイテム未確定時の作業バッファ）
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    // 発行済みアイテムを編集したら「URLを開く」→「URL書き出し」へ戻す（更新を促す）
+    // ※読込中(_loadingItem)のプログラム的保存は編集とみなさない
+    if (currentVaultId && !_loadingItem && !shareDirty) { shareDirty = true; refreshShareBtn(); }
     showSaveStatus('saved');
   } catch (e) {
     if (e.name === 'QuotaExceededError') showSaveStatus('error');
@@ -1749,10 +2837,11 @@ function rescalePageToCurrentWidth(p) {
   if (newW === p.canvasW && newH === p.canvasH) return;
   const ratio = newW / p.canvasW;
   p.annotations.forEach(a => {
-    a.x = Math.round(a.x * ratio);
-    a.y = Math.round(a.y * ratio);
+    if (a.x != null) a.x = Math.round(a.x * ratio);
+    if (a.y != null) a.y = Math.round(a.y * ratio);
     if (a.w != null) a.w = Math.round(a.w * ratio);
     if (a.h != null) a.h = Math.round(a.h * ratio);
+    if (a.points) a.points = a.points.map(pt => ({ x: pt.x * ratio, y: pt.y * ratio }));
   });
   p.canvasW = newW;
   p.canvasH = newH;
@@ -1812,8 +2901,9 @@ function loadFromStorage() {
 }
 
 function clearStorage() {
-  if (!confirm('保存されたデータをすべて消去して最初からやり直しますか？\nこの操作は取り消せません。')) return;
+  if (!confirm('現在の作業をクリアして新規作成しますか？\n（書き出し済みのURL一覧は保存庫に残ります）')) return;
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem('revision-vault-current'); // 現在の作業の紐づけも解除（新規扱いに）
   location.reload();
 }
 
@@ -1864,182 +2954,47 @@ function showSaveStatus(state) {
   updateToolbarCompact(); // save-status のテキスト幅変化に追従
 }
 
-// ===== DRAFT SYSTEM =====
-const DRAFT_KEY_PREFIX = 'revision-draft-';
-
-function listDraftKeys() {
-  const keys = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith(DRAFT_KEY_PREFIX)) keys.push(k);
-  }
-  keys.sort((a, b) => {
-    const ta = parseInt(a.replace(DRAFT_KEY_PREFIX, '')) || 0;
-    const tb = parseInt(b.replace(DRAFT_KEY_PREFIX, '')) || 0;
-    return tb - ta; // 新しい順
-  });
-  return keys;
-}
-
-function openDraftPanel() {
-  buildDraftList();
-  const proj = document.getElementById('meta-project').value;
-  document.getElementById('draft-name-input').value = proj ? proj : '';
-  document.getElementById('draft-overlay').classList.add('show');
-}
-
-function closeDraftPanel() {
-  document.getElementById('draft-overlay').classList.remove('show');
-}
-
-function buildDraftList() {
-  const keys = listDraftKeys();
-  const list = document.getElementById('draft-list');
-  if (!keys.length) {
-    list.innerHTML = '<div class="draft-empty">保存されたドラフトはありません</div>';
-    return;
-  }
-  list.innerHTML = keys.map(k => {
-    let draft;
-    try { draft = JSON.parse(localStorage.getItem(k)); } catch(e) { return ''; }
-    if (!draft) return '';
-    const name = escHtml(draft.name || '（名前なし）');
-    const date = new Date(draft.savedAt).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
-    const totalAnns = (draft.pages || []).reduce((s, p) => s + (p.annotations ? p.annotations.length : 0), 0);
-    const pageCount = (draft.pages || []).length;
-    return `
-      <div class="draft-item">
-        <div class="draft-info">
-          <div class="draft-name-text">${name}</div>
-          <div class="draft-meta">${date}　${pageCount}ページ ・ 指示${totalAnns}件</div>
-        </div>
-        <div class="draft-actions">
-          <button class="btn-draft-load" onclick="loadDraft('${k}')">読み込む</button>
-          <button class="btn-draft-del" onclick="deleteDraft('${k}')">削除</button>
-        </div>
-      </div>`;
-  }).join('');
-}
-
+// ===== 編集状態のリセット（保存庫の「新規作成」で利用）=====
 function resetToFresh() {
   pages = [newPage('ページ 1')];
   curIdx = 0;
   document.getElementById('meta-project').value  = '';
-  document.getElementById('meta-deadline').value = '';
-  document.getElementById('meta-pdfname').value  = '';
   localStorage.removeItem(STORAGE_KEY);
   activatePage(0);
 }
 
-function saveDraft() {
-  // DOMのテキストを同期
-  document.querySelectorAll('.ann-text[data-id]').forEach(el => {
-    const ann = pg().annotations.find(a => a.id == el.dataset.id);
-    if (ann) ann.text = el.value;
-  });
-  const nameInput = document.getElementById('draft-name-input').value.trim();
-  const project = document.getElementById('meta-project').value;
-  const draftName = nameInput || project || '（名前なし）';
-  const ts = Date.now();
-  const key = DRAFT_KEY_PREFIX + ts;
-  const data = {
-    name: draftName,
-    savedAt: ts,
-    curIdx,
-    meta: {
-      project:  document.getElementById('meta-project').value,
-      deadline: document.getElementById('meta-deadline').value,
-      pdfname:  document.getElementById('meta-pdfname').value,
-    },
-    pages: pages.map(p => ({
-      id: p.id, label: p.label,
-      imgDataURL: p.imgDataURL || null,
-      thumbnail: p.thumbnail,
-      canvasW: p.canvasW, canvasH: p.canvasH,
-      nextNum: p.nextNum,
-      annotations: p.annotations.map(a => ({
-        id: a.id, num: a.num, type: a.type,
-        x: a.x, y: a.y, w: a.w, h: a.h,
-        text: a.text, images: a.images || []
-      }))
-    }))
-  };
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-    closeDraftPanel();
-    resetToFresh();
-    showSaveStatus('drafted');
-  } catch(e) {
-    alert('保存に失敗しました。容量不足の可能性があります。');
-  }
-}
-
-function loadDraft(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) { alert('ドラフトが見つかりません。'); return; }
-    const data = JSON.parse(raw);
-    closeDraftPanel();
-    if (data.meta) {
-      document.getElementById('meta-project').value  = data.meta.project  || '';
-      document.getElementById('meta-deadline').value = data.meta.deadline || '';
-      document.getElementById('meta-pdfname').value  = data.meta.pdfname  || '';
-    }
-    pages = data.pages.map(pd => ({
-      id: pd.id, label: pd.label,
-      imgEl: null, imgDataURL: pd.imgDataURL || null,
-      thumbnail: pd.thumbnail,
-      canvasW: pd.canvasW, canvasH: pd.canvasH,
-      nextNum: pd.nextNum,
-      annotations: pd.annotations || [],
-      redoStack: []
-    }));
-    curIdx = Math.min(data.curIdx || 0, pages.length - 1);
-    let pending = pages.filter(p => p.imgDataURL).length;
-    if (pending === 0) { activatePage(curIdx); saveToStorage(); return; }
-    pages.forEach(p => {
-      if (!p.imgDataURL) return;
-      const img = new Image();
-      img.onload = () => {
-        p.imgEl = img;
-        rescalePageToCurrentWidth(p);
-        pending--;
-        if (pending === 0) { activatePage(curIdx); saveToStorage(); }
-      };
-      img.src = p.imgDataURL;
-    });
-  } catch(e) {
-    alert('読み込みに失敗しました。');
-  }
-}
-
-function deleteDraft(key) {
-  if (!confirm('このドラフトを削除しますか？')) return;
-  localStorage.removeItem(key);
-  buildDraftList();
-}
-
 // ===== KEYBOARD =====
 document.addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') { e.preventDefault(); redoLast(); return; }
-  if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); undoLast(); }
-  if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+  // テキスト入力中はツール切替ショートカットを無効化（誤爆防止）
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || '')) || e.target.isContentEditable;
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); redoLast(); return; }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); undoLast(); return; }
+  // 選択中の注釈を削除（テキスト入力中は無効）
+  if (!typing && selectedAnnId != null && (e.key === 'Delete' || e.key === 'Backspace')) {
+    e.preventDefault(); removeAnnotation(selectedAnnId); return;
+  }
+  if (e.key === 'Escape' && selectedAnnId != null) { selectAnn(null); return; }
+  if (!e.metaKey && !e.ctrlKey && !e.altKey && !typing) {
     if (e.key === 'p') setTool('pin');
     if (e.key === 'b') setTool('box');
+    if (e.key === 'd') setTool('pen');
   }
 });
 
 // ===== INIT =====
-// Meta フィールドの変更を自動保存
-['meta-project', 'meta-deadline', 'meta-pdfname'].forEach(id => {
-  document.getElementById(id).addEventListener('input', debouncedSave);
-});
+// アイテム名の変更を自動保存
+document.getElementById('meta-project').addEventListener('input', debouncedSave);
 
-// localStorageからデータを復元（なければデフォルト表示）
-if (!loadFromStorage()) {
-  rebuildPageStrip();
-  rebuildSidebar();
-}
+// カラーパレット初期化
+buildColorPalette();
+
+// 旧「現在の作業」をアイテムへ移行 → 起動はホーム画面から
+migrateLegacyToItems();
+currentVaultId = null;        // ホーム表示中はどのアイテムにも紐づけない（誤上書き防止）
+rebuildPageStrip();
+rebuildSidebar();
+setHomeView(homeView);
+showHome();
 </script>
 </body>
 </html>
